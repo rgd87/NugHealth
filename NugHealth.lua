@@ -109,6 +109,9 @@ function NugHealth.SPELLS_CHANGED(self, event)
     local _, class = UnitClass("player")
     local spec = GetSpecialization()
     if  (class == "WARRIOR" and spec == 3) or 
+        (class == "DEATHKNIGHT" and spec == 1) or 
+        (class == "PALADIN" and spec == 2) or 
+        (class == "DRUID" and spec == 3) or 
         (class == "MONK" and spec == 1)
     then
         self:Enable()
@@ -159,6 +162,12 @@ function NugHealth:Enable()
     self:RegisterUnitEvent("UNIT_HEALTH", "player")
     -- self:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
     self:RegisterUnitEvent("UNIT_ABSORB_AMOUNT_CHANGED", "player")
+
+    self.resolveName = GetSpellInfo(158300)
+    if self.resolveName then
+        self:SetScript("OnUpdate", NugHealth.ResolveOnUpdate)
+    end
+    
     if select(2, UnitClass"player") == "MONK" then
         self:SetScript("OnUpdate", NugHealth.StaggerOnUpdate)
         self.power.auraname = GetSpellInfo(115307)
@@ -167,10 +176,6 @@ function NugHealth:Enable()
     end
 
     if select(2, UnitClass"player") == "WARRIOR" then
-        self.resolveName = GetSpellInfo(158300)
-        if self.resolveName then
-            self:SetScript("OnUpdate", NugHealth.ResolveOnUpdate)
-        end
         self.power.auraname = GetSpellInfo(132404)
         self.power:SetColor(80/255, 83/255, 150/255)
         self:RegisterUnitEvent("UNIT_AURA", "player");
