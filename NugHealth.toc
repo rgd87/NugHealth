@@ -1,0 +1,6 @@
+## Interface: 60000
+## Title: NugHealth
+## Author: d87
+## SavedVariables: NugHealthDB
+
+NugHealth.lua
