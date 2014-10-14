@@ -180,6 +180,12 @@ function NugHealth:Enable()
         self.power:SetColor(80/255, 83/255, 150/255)
         self:RegisterUnitEvent("UNIT_AURA", "player");
     end
+
+    if select(2, UnitClass"player") == "DEATHKNIGHT" then
+        self.power.auraname = GetSpellInfo(171049)
+        self.power:SetColor(.7, 0, 0)
+        self:RegisterUnitEvent("UNIT_AURA", "player");
+    end
     -- self:RegisterUnitEvent("UNIT_ATTACK_POWER", "player");
     -- self:RegisterUnitEvent("UNIT_RAGE", "player");
 
