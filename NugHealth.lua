@@ -180,6 +180,24 @@ function NugHealth:Enable()
         self.power:SetColor(80/255, 83/255, 150/255)
         self:RegisterUnitEvent("UNIT_AURA", "player");
     end
+
+    if select(2, UnitClass"player") == "DEATHKNIGHT" then
+        self.power.auraname = GetSpellInfo(171049)
+        self.power:SetColor(.7, 0, 0)
+        self:RegisterUnitEvent("UNIT_AURA", "player");
+    end
+
+    if select(2, UnitClass"player") == "PALADIN" then
+        self.power.auraname = GetSpellInfo(132403)
+        self.power:SetColor( 226/255, 35/255, 103/255 )
+        self:RegisterUnitEvent("UNIT_AURA", "player");
+    end
+
+    if select(2, UnitClass"player") == "DRUID" then
+        self.power.auraname = GetSpellInfo(132402)
+        self.power:SetColor(.7, .2, .2)
+        self:RegisterUnitEvent("UNIT_AURA", "player");
+    end
     -- self:RegisterUnitEvent("UNIT_ATTACK_POWER", "player");
     -- self:RegisterUnitEvent("UNIT_RAGE", "player");
 
@@ -312,12 +330,13 @@ function NugHealth.Create(self)
 
     local hplost = CreateFrame("StatusBar", nil, self)
     hplost:SetAllPoints(self)
-    hplost:SetStatusBarTexture([[Interface\AddOns\NugHealth\gradient]])
+    hplost:SetStatusBarTexture([[Interface\AddOns\NugHealth\white]])
     hplost:GetStatusBarTexture():SetDrawLayer("ARTWORK",-7)
     hplost:SetMinMaxValues(0,1)
     hplost:SetOrientation("VERTICAL")
     hplost:SetValue(0)
-    hplost:SetStatusBarColor(.8,0,0, 1)
+    hplost:SetStatusBarColor(1,0,0, 1)
+    -- hplost:SetStatusBarColor(1,1,1, .9)
 
     hplost.currentvalue = 0
     hplost:SetScript("OnUpdate", function(self, time)
