@@ -198,6 +198,7 @@ function NugHealth:Enable()
         self.power:SetColor(.7, .2, .2)
         self:RegisterUnitEvent("UNIT_AURA", "player");
     end
+    
     -- self:RegisterUnitEvent("UNIT_ATTACK_POWER", "player");
     -- self:RegisterUnitEvent("UNIT_RAGE", "player");
 
