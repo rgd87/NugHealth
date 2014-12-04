@@ -131,28 +131,52 @@ end
 
 function NugHealth.ResolveOnUpdate(self, time)
     self._elapsed = (self._elapsed or 0) + time
-    if self._elapsed < 0.3 then return end
+    if self._elapsed < 0.3 then return true end
     self._elapsed = 0
 
     local name, _,_, count, _, duration, expirationTime, caster, _,_, spellID, _, _, _, selfhealIncrease = UnitBuff("player", self.resolveName)
 
+    selfhealIncrease = selfhealIncrease or 0
     local vp = (selfhealIncrease-10)/180
 
     self.resolve:SetValue(vp)
     self.resolve:SetStatusBarColor(PercentColor(vp*1.5))
 end
 
+-- function NugHealth.StaggerOnUpdate(self, time)
+--     self._elapsed = (self._elapsed or 0) + time
+--     if self._elapsed < 0.1 then return end
+--     self._elapsed = 0
+
+--     local stagger = UnitStagger("player")/UnitHealthMax("player")
+--     -- local name, _,_, count, _, duration, expirationTime, caster, _,_,
+--                -- spellID, _, _, _, attackPowerIncrease, val2 = UnitBuff("player", )
+--     self.resolve:SetValue(stagger)
+--     self.resolve:SetStatusBarColor(PercentColor(stagger*3))
+-- end
+
 function NugHealth.StaggerOnUpdate(self, time)
-    self._elapsed = (self._elapsed or 0) + time
-    if self._elapsed < 0.1 then return end
-    self._elapsed = 0
+    if NugHealth.ResolveOnUpdate(self, time) then return end
 
     local stagger = UnitStagger("player")/UnitHealthMax("player")
     -- local name, _,_, count, _, duration, expirationTime, caster, _,_,
                -- spellID, _, _, _, attackPowerIncrease, val2 = UnitBuff("player", )
-    self.resolve:SetValue(stagger)
-    self.resolve:SetStatusBarColor(PercentColor(stagger*1.5))
+    self.power:SetValue(stagger)
+    if stagger == 0 then
+        self.power:Hide()
+    else
+        -- print(stagger, self.power:GetMinMaxValues(), self.power:GetValue())
+        self.power:Show()
+    end
+    self.power:SetColor(PercentColor(stagger*1.5))
 end
+local function MakeSetColor(mul)
+    return function(self, r,g,b)
+        self:SetStatusBarColor(r,g,b)
+        self.bg:SetVertexColor(r*mul,g*mul,b*mul)
+    end
+end
+
 
 function NugHealth.UNIT_ABSORB_AMOUNT_CHANGED(self, event, unit)
     self.absorb:SetValue(UnitGetTotalAbsorbs(unit)/ UnitHealthMax(unit))
@@ -170,9 +194,14 @@ function NugHealth:Enable()
     
     if select(2, UnitClass"player") == "MONK" then
         self:SetScript("OnUpdate", NugHealth.StaggerOnUpdate)
-        self.power.auraname = GetSpellInfo(115307)
+        self.power:SetScript("OnUpdate",nil)
+        self.power:SetMinMaxValues(0,1)
+        self.power:SetValue(0)
+        self.power.SetColor = MakeSetColor(0.1)
+        -- self.power.auraname = GetSpellInfo(115307)
         self.power:SetColor(38/255, 221/255, 163/255)
-        self:RegisterUnitEvent("UNIT_AURA", "player");
+        self.power:Show()
+        -- self:RegisterUnitEvent("UNIT_AURA", "player");
     end
 
     if select(2, UnitClass"player") == "WARRIOR" then
