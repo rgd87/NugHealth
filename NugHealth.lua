@@ -14,13 +14,23 @@ local vengeanceMinRange = 7000
 local vengeanceMaxRange = 200000
 local vengeanceRedRange = 60000
 
+
+local stagerSide = "LEFT"
+local staggerMul = 1
+local resolveMaxPercent = 180
+-- local staggerScaleFactor
+
 local defaults = {
     -- anchor = {
         point = "CENTER",
         relative_point = "CENTER",
         frame = "UIParent",
+        classcolor = true,
+        healthcolor = { 0.78, 0.61, 0.43 },
         x = 0,
         y = 0,
+        resolveLimit = 180,
+        staggerLimit = 70,
     -- }
 }
 
@@ -69,6 +79,9 @@ function NugHealth.ADDON_LOADED(self,event,arg1)
         SetupDefaults(NugHealthDB, defaults)
 
         self:Create()
+
+        resolveMaxPercent = NugHealthDB.resolveLimit
+        staggerMul = 100/NugHealthDB.staggerLimit
 
         -- self:RegisterUnitEvent("UNIT_HEALTH", "player")
         -- self:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
@@ -137,7 +150,7 @@ function NugHealth.ResolveOnUpdate(self, time)
     local name, _,_, count, _, duration, expirationTime, caster, _,_, spellID, _, _, _, selfhealIncrease = UnitBuff("player", self.resolveName)
 
     selfhealIncrease = selfhealIncrease or 0
-    local vp = (selfhealIncrease-10)/180
+    local vp = (selfhealIncrease-10)/resolveMaxPercent
 
     self.resolve:SetValue(vp)
     self.resolve:SetStatusBarColor(PercentColor(vp*1.5))
@@ -158,7 +171,7 @@ end
 function NugHealth.StaggerOnUpdate(self, time)
     if NugHealth.ResolveOnUpdate(self, time) then return end
 
-    local stagger = UnitStagger("player")/UnitHealthMax("player")
+    local stagger = (UnitStagger("player")/UnitHealthMax("player")) * staggerMul
     -- local name, _,_, count, _, duration, expirationTime, caster, _,_,
                -- spellID, _, _, _, attackPowerIncrease, val2 = UnitBuff("player", )
     self.power:SetValue(stagger)
@@ -168,7 +181,7 @@ function NugHealth.StaggerOnUpdate(self, time)
         -- print(stagger, self.power:GetMinMaxValues(), self.power:GetValue())
         self.power:Show()
     end
-    self.power:SetColor(PercentColor(stagger*1.5))
+    self.power:SetColor(PercentColor(stagger))
 end
 local function MakeSetColor(mul)
     return function(self, r,g,b)
@@ -383,9 +396,17 @@ function NugHealth.Create(self)
 
     self.healthlost = hplost
 
-    local c = RAID_CLASS_COLORS.WARRIOR
-    hp:SetStatusBarColor(c.r*.2, c.g*.2, c.b*.2)
-    hp.bg:SetVertexColor(c.r, c.g, c.b)
+    hp.SetColor = function(self, r,g,b)
+        self:SetStatusBarColor(r*0.2,g*0.2,b*0.2)
+        self.bg:SetVertexColor(r,g,b)
+    end
+    if NugHealthDB.classcolor then
+        local _, class = UnitClass("player")
+        local c = RAID_CLASS_COLORS[class]
+        hp:SetColor(c.r,c.g,c.b)
+    else
+        hp:SetColor(unpack(NugHealthDB.healthcolor))
+    end
 
     self.health = hp
 
@@ -487,7 +508,7 @@ function NugHealth.Create(self)
 
 
     local powerbar = CreateFrame("StatusBar", nil, self)
-    powerbar:SetWidth(4)
+    powerbar:SetWidth(7)
     powerbar:SetPoint("TOPLEFT",self,"TOPRIGHT",1,0)
     powerbar:SetPoint("BOTTOMLEFT",self,"BOTTOMRIGHT",1,0)
     powerbar:SetStatusBarTexture("Interface\\Addons\\NugHealth\\white")
@@ -554,6 +575,57 @@ NugHealth.Commands = {
         NugHealth:EnableMouse(true)
         NugHealth:Show()
     end,
+    ["resolvelimit"] = function(v)
+        local num = tonumber(v)
+        if not num or num < 20 or num > 500 then
+            num = 180
+            print('correct range is 20-500')
+        end
+        NugHealthDB.resolveLimit = num
+        resolveMaxPercent = NugHealthDB.resolveLimit
+        print("New resolve limit =", num)
+    end,
+    ["staggerlimit"] = function(v)
+        local num = tonumber(v)
+        if not num or num < 5 or num > 100 then
+            num = defaults.staggerLimit
+            print('correct range is 10-500')
+        end
+        NugHealthDB.staggerLimit = num
+        staggerMul = 100/NugHealthDB.staggerLimit
+        print("New stagger limit =", num)
+    end,
+    ["classcolor"] = function(v)
+        NugHealthDB.classcolor = not NugHealthDB.classcolor
+        if NugHealthDB.classcolor then
+            local _, class = UnitClass("player")
+            local c = RAID_CLASS_COLORS[class]
+            NugHealth.health:SetColor(c.r,c.g,c.b)
+        else
+            NugHealth.health:SetColor(unpack(NugHealthDB.healthcolor))
+        end
+    end,
+
+    ["healthcolor"] = function(v)
+        ColorPickerFrame:Hide()
+        ColorPickerFrame:SetColorRGB(unpack(NugHealthDB.healthcolor))
+        ColorPickerFrame.hasOpacity = false
+        ColorPickerFrame.previousValues = {unpack(NugHealthDB.healthcolor)} -- otherwise we'll get reference to changed table
+        ColorPickerFrame.func = function(previousValues)
+            local r,g,b
+            if previousValues then
+                r,g,b = unpack(previousValues)
+            else
+                r,g,b = ColorPickerFrame:GetColorRGB();
+            end
+            NugHealthDB.healthcolor[1] = r
+            NugHealthDB.healthcolor[2] = g
+            NugHealthDB.healthcolor[3] = b
+            NugHealth.health:SetColor(r,g,b)
+        end
+        ColorPickerFrame.cancelFunc = ColorPickerFrame.func
+        ColorPickerFrame:Show()
+    end,
     ["lock"] = function(v)
         NugHealth:EnableMouse(false)
         local self = NugHealth
@@ -569,7 +641,9 @@ function NugHealth.SlashCmd(msg)
     if not k or k == "help" then 
         print([[Usage:
           |cff55ffff/nhe unlock|r
-          |cff55ff55/nhe lock|r]]
+          |cff55ff55/nhe lock|r
+          |cff55ff22/nhe resolvelimit <20-500> - upper limit of resolve bar in selfheal boost percents|r
+          |cff55ff22/nhe staggerlimit <10-100> - upper limit of stagger bar in player max health percents|r]]
         )
     end
     if NugHealth.Commands[k] then
