@@ -7,6 +7,7 @@ NugHealth:RegisterEvent("ADDON_LOADED")
 
 local DB_VERSION = 1
 local UnitHealth = UnitHealth
+local UnitHealthOriginal = UnitHealth
 local UnitHealthMax = UnitHealthMax
 
 
@@ -31,6 +32,7 @@ local defaults = {
         y = 0,
         resolveLimit = 180,
         staggerLimit = 70,
+        useCLH = false,
     -- }
 }
 
@@ -144,7 +146,7 @@ end
 
 function NugHealth.ResolveOnUpdate(self, time)
     self._elapsed = (self._elapsed or 0) + time
-    if self._elapsed < 0.3 then return true end
+    if self._elapsed < self.timeout then return true end
     self._elapsed = 0
 
     local name, _,_, count, _, duration, expirationTime, caster, _,_, spellID, _, _, _, selfhealIncrease = UnitBuff("player", self.resolveName)
@@ -171,7 +173,17 @@ end
 function NugHealth.StaggerOnUpdate(self, time)
     if NugHealth.ResolveOnUpdate(self, time) then return end
 
-    local stagger = (UnitStagger("player")/UnitHealthMax("player")) * staggerMul
+
+    -- local stagger = (UnitStagger("player")/UnitHealthMax("player")) * staggerMul
+    local currentStagger = 0
+    for i=1,100 do
+        local name, _,_, count, _, duration, expirationTime, caster, _,_, spellID, _, _, _, st1, staggerValue = UnitDebuff("player", i)
+        if spellID == 124273 or spellID == 124274 or spellID == 124275 then
+            currentStagger = staggerValue --*duration
+        end
+    end
+
+    local stagger = (currentStagger/UnitHealthMax("player")) * staggerMul
     -- local name, _,_, count, _, duration, expirationTime, caster, _,_,
                -- spellID, _, _, _, attackPowerIncrease, val2 = UnitBuff("player", )
     self.power:SetValue(stagger)
@@ -197,15 +209,25 @@ end
 
 function NugHealth:Enable()
     self:RegisterUnitEvent("UNIT_HEALTH", "player")
+    local LibCLHealth = LibStub("LibCombatLogHealth-1.0")
+    if LibCLHealth and NugHealthDB.useCLH then
+        self:UnregisterEvent("UNIT_HEALTH")
+        UnitHealth = LibCLHealth.UnitHealth
+        LibCLHealth.RegisterCallback(self, "COMBAT_LOG_HEALTH", function(event, unit, eventType)
+            return NugHealth:UNIT_HEALTH(eventType, unit)
+        end)
+    end
     -- self:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
     self:RegisterUnitEvent("UNIT_ABSORB_AMOUNT_CHANGED", "player")
 
     self.resolveName = GetSpellInfo(158300)
     if self.resolveName then
+        self.timeout = 0.3
         self:SetScript("OnUpdate", NugHealth.ResolveOnUpdate)
     end
     
     if select(2, UnitClass"player") == "MONK" then
+        self.timeout = 0.05
         self:SetScript("OnUpdate", NugHealth.StaggerOnUpdate)
         self.power:SetScript("OnUpdate",nil)
         self.power:SetMinMaxValues(0,1)
@@ -631,6 +653,25 @@ NugHealth.Commands = {
         local self = NugHealth
         if InCombatLockdown() then self:Show() else self:Hide() end
     end,
+
+    ["useclh"] = function(v)
+        NugHealthDB.useCLH = not NugHealthDB.useCLH
+        if NugHealthDB.useCLH then
+            UnitHealth = UnitHealthOriginal
+            NugHealth:RegisterUnitEvent("UNIT_HEALTH", "player")
+            local LibCLHealth = LibStub("LibCombatLogHealth-1.0")
+            LibCLHealth.UnregisterCallback(f, "COMBAT_LOG_HEALTH")
+            print("Fast health updates enabled")
+        else
+            NugHealth:UnregisterEvent("UNIT_HEALTH")
+            local LibCLHealth = LibStub("LibCombatLogHealth-1.0")
+            UnitHealth = LibCLHealth.UnitHealth
+            LibCLHealth.RegisterCallback(f, "COMBAT_LOG_HEALTH", function(event, unit, eventType)
+                return NugHealth:UNIT_HEALTH(eventType, unit)
+            end)
+            print("Fast health updates disabled")
+        end
+    end,
     -- ["set"] = function(v)
         -- local p = ParseOpts(v)
     -- end
@@ -642,6 +683,7 @@ function NugHealth.SlashCmd(msg)
         print([[Usage:
           |cff55ffff/nhe unlock|r
           |cff55ff55/nhe lock|r
+          |cff55ff22/nhe useclh - use LibCombatLogHealth
           |cff55ff22/nhe resolvelimit <20-500> - upper limit of resolve bar in selfheal boost percents|r
           |cff55ff22/nhe staggerlimit <10-100> - upper limit of stagger bar in player max health percents|r]]
         )

@@ -3,4 +3,8 @@
 ## Author: d87
 ## SavedVariables: NugHealthDB
 
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\LibCombatLogHealth-1.0\LibCombatLogHealth-1.0.lua
+
 NugHealth.lua
