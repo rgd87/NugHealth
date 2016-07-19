@@ -1,3 +1,7 @@
+7.0.0:
+ - Legion Update
+ - Resolve 5s variation reimpemented
+
 1.0:
  - staggerlimit and resolvelimit options
  - healthcolor option
