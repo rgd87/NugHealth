@@ -18,8 +18,9 @@ local vengeanceRedRange = 60000
 
 local stagerSide = "LEFT"
 local staggerMul = 1
-local resolveMaxPercent = 180
+local resolveMaxPercent = 30
 -- local staggerScaleFactor
+local playerGUID = 0
 
 local defaults = {
     -- anchor = {
@@ -30,7 +31,8 @@ local defaults = {
         healthcolor = { 0.78, 0.61, 0.43 },
         x = 0,
         y = 0,
-        resolveLimit = 180,
+        showResolve = true,
+        resolveLimit = 30,
         staggerLimit = 70,
         useCLH = false,
     -- }
@@ -127,6 +129,7 @@ function NugHealth.SPELLS_CHANGED(self, event)
         (class == "DEATHKNIGHT" and spec == 1) or 
         (class == "PALADIN" and spec == 2) or 
         (class == "DRUID" and spec == 3) or 
+        (class == "DEMONHUNTER" and spec == 2) or 
         (class == "MONK" and spec == 1)
     then
         self:Enable()
@@ -149,11 +152,9 @@ function NugHealth.ResolveOnUpdate(self, time)
     if self._elapsed < self.timeout then return true end
     self._elapsed = 0
 
-    local name, _,_, count, _, duration, expirationTime, caster, _,_, spellID, _, _, _, selfhealIncrease = UnitBuff("player", self.resolveName)
-
-    selfhealIncrease = selfhealIncrease or 0
-    local vp = (selfhealIncrease-10)/resolveMaxPercent
-
+    local v = NugHealth:GatherResolveDamage(5)/UnitHealthMax("player") --damage during past 5seconds relative to max health
+    local vp = v*100/resolveMaxPercent
+   
     self.resolve:SetValue(vp)
     self.resolve:SetStatusBarColor(PercentColor(vp*1.5))
 end
@@ -182,6 +183,7 @@ function NugHealth.StaggerOnUpdate(self, time)
             currentStagger = staggerValue --*duration
         end
     end
+    -- local currentStagger = UnitStagger("player")
 
     local stagger = (currentStagger/UnitHealthMax("player")) * staggerMul
     -- local name, _,_, count, _, duration, expirationTime, caster, _,_,
@@ -208,6 +210,8 @@ function NugHealth.UNIT_ABSORB_AMOUNT_CHANGED(self, event, unit)
 end
 
 function NugHealth:Enable()
+    playerGUID = UnitGUID("player")
+
     self:RegisterUnitEvent("UNIT_HEALTH", "player")
     local LibCLHealth = LibStub("LibCombatLogHealth-1.0")
     if LibCLHealth and NugHealthDB.useCLH then
@@ -220,8 +224,8 @@ function NugHealth:Enable()
     -- self:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
     self:RegisterUnitEvent("UNIT_ABSORB_AMOUNT_CHANGED", "player")
 
-    self.resolveName = GetSpellInfo(158300)
-    if self.resolveName then
+    if NugHealthDB.showResolve then
+        self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
         self.timeout = 0.3
         self:SetScript("OnUpdate", NugHealth.ResolveOnUpdate)
     end
@@ -236,6 +240,9 @@ function NugHealth:Enable()
         -- self.power.auraname = GetSpellInfo(115307)
         self.power:SetColor(38/255, 221/255, 163/255)
         self.power:Show()
+
+        -- self.power.auraname = GetSpellInfo(215479)
+        -- self.power:SetColor(80/255, 83/255, 150/255)
         -- self:RegisterUnitEvent("UNIT_AURA", "player");
     end
 
@@ -245,10 +252,16 @@ function NugHealth:Enable()
         self:RegisterUnitEvent("UNIT_AURA", "player");
     end
 
-    if select(2, UnitClass"player") == "DEATHKNIGHT" then
-        self.power.auraname = GetSpellInfo(171049)
-        self.power:SetColor(.7, 0, 0)
+    if select(2, UnitClass"player") == "DEMONHUNTER" then
+        self.power.auraname = GetSpellInfo(203819)
+        self.power:SetColor(.7, 1, 0)
         self:RegisterUnitEvent("UNIT_AURA", "player");
+    end
+
+    if select(2, UnitClass"player") == "DEATHKNIGHT" then
+        -- self.power.auraname = GetSpellInfo(171049)
+        -- self.power:SetColor(.7, 0, 0)
+        -- self:RegisterUnitEvent("UNIT_AURA", "player");
     end
 
     if select(2, UnitClass"player") == "PALADIN" then
@@ -258,7 +271,7 @@ function NugHealth:Enable()
     end
 
     if select(2, UnitClass"player") == "DRUID" then
-        self.power.auraname = GetSpellInfo(132402)
+        self.power.auraname = GetSpellInfo(192081)
         self.power:SetColor(.7, .2, .2)
         self:RegisterUnitEvent("UNIT_AURA", "player");
     end
@@ -273,38 +286,6 @@ function NugHealth:Enable()
     self.isDisabled = nil
 end
 
-
--- do
---     local vengeanceName = GetSpellInfo(132365)
---     local vengeanceAttackPower = 0
-
-    -- local function CalculateEstimatedAbsorbValue(rage)
-    --     local baseAttackPower, positiveBuff, negativeBuff = UnitAttackPower("player")
-    --     local attackPower = baseAttackPower + positiveBuff + negativeBuff
-    --     local _, strength = UnitStat("player", 1)
-    --     local _, stamina = UnitStat("player", 3)
-    --     local rageMultiplier = max(20, min(60, rage)) / 60.0
-    --     return max(2 * (attackPower - 2 * strength), stamina * 2.5) * rageMultiplier
-    -- end
-
-    -- function NugHealth:UpdateAbsorbValue() --absorbForced)
-    --     -- local rage = UnitPower("player")
-    --     -- local absorb = CalculateEstimatedAbsorbValue(rage)
-    --     -- absorb = absorbForced or absorb
-    --     -- self.power:SetValue(absorb)
-    --     self.power:SetValue(vengeanceAttackPower)
-    --     local vRate = vengeanceAttackPower / vengeanceRedRange
-    --     self.power:SetStatusBarColor(PercentColor(vRate))
-    -- end
-    -- function NugHealth.UNIT_ATTACK_POWER(self, event)
-        -- self:UpdateAbsorbValue()
-    -- end
-    -- function NugHealth.UNIT_POWER(self,event,unit,powertype)
-        -- if powertype == "RAGE" then
-            -- self:UpdateAbsorbValue()
-        -- end
-    -- end
-
 function NugHealth.UNIT_AURA(self, event)
         local name, _,_, count, _, duration, expirationTime, caster, _,_, spellID = UnitBuff("player", self.power.auraname)
 
@@ -317,7 +298,6 @@ function NugHealth.UNIT_AURA(self, event)
             self.power:Hide()
         end
 end
--- end
 
 function NugHealth.UNIT_HEALTH(self, event)
     local h = UnitHealth("player")
@@ -451,7 +431,8 @@ function NugHealth.Create(self)
     local sag = at:CreateAnimationGroup()
     sag:SetLooping("BOUNCE")
     local sa1 = sag:CreateAnimation("Alpha")
-    sa1:SetChange(1)
+    sa1:SetFromAlpha(0)
+    sa1:SetToAlpha(1)
     sa1:SetDuration(0.3)
     sa1:SetOrder(1)
     sa1:SetScript("OnFinished", function(self)
@@ -599,9 +580,9 @@ NugHealth.Commands = {
     end,
     ["resolvelimit"] = function(v)
         local num = tonumber(v)
-        if not num or num < 20 or num > 500 then
+        if not num or num < 5 or num > 300 then
             num = 180
-            print('correct range is 20-500')
+            print('correct range is 5-300')
         end
         NugHealthDB.resolveLimit = num
         resolveMaxPercent = NugHealthDB.resolveLimit
@@ -652,6 +633,13 @@ NugHealth.Commands = {
         NugHealth:EnableMouse(false)
         local self = NugHealth
         if InCombatLockdown() then self:Show() else self:Hide() end
+
+    end,
+
+    ["resolve"] = function(v)
+        NugHealthDB.showResolve = not NugHealthDB.showResolve
+        print("show resolve :", NugHealthDB.showResolve)
+        NugHealth:SPELLS_CHANGED()
     end,
 
     ["useclh"] = function(v)
@@ -684,6 +672,7 @@ function NugHealth.SlashCmd(msg)
           |cff55ffff/nhe unlock|r
           |cff55ff55/nhe lock|r
           |cff55ff22/nhe useclh - use LibCombatLogHealth
+          |cff55ff22/nhe resolve - show resolve 5s reimplementation |r
           |cff55ff22/nhe resolvelimit <20-500> - upper limit of resolve bar in selfheal boost percents|r
           |cff55ff22/nhe staggerlimit <10-100> - upper limit of stagger bar in player max health percents|r]]
         )
@@ -693,4 +682,61 @@ function NugHealth.SlashCmd(msg)
     end    
 end
 
+do 
+    local damageHistory = {}
+    local math_floor = math.floor
+    local roundToInteger = function(v) return math_floor(v*10+.1) end
 
+    function NugHealth:COMBAT_LOG_EVENT_UNFILTERED(
+                    event, timestamp, eventType, hideCaster,
+                    srcGUID, srcName, srcFlags, srcFlags2,
+                    dstGUID, dstName, dstFlags, dstFlags2, ...)
+
+        if dstGUID == playerGUID then
+            local amount
+            if(eventType == "SWING_DAMAGE") then --autoattack
+                amount = (...); -- putting in braces will autoselect the first arg, no need to use select(1, ...);
+            elseif(eventType == "SPELL_PERIODIC_DAMAGE" or eventType == "SPELL_DAMAGE"
+            or eventType == "DAMAGE_SPLIT" or eventType == "DAMAGE_SHIELD") then
+                amount = select(4, ...);
+            elseif(eventType == "ENVIRONMENTAL_DAMAGE") then
+                amount = select(2, ...);
+            -- elseif(eventType == "SPELL_HEAL" or eventType == "SPELL_PERIODIC_HEAL") then
+            --     amount = select(4, ...) - select(5, ...) -- heal amount - overheal
+            --     if amount == 0 then return end
+            elseif(eventType == "SPELL_ABSORBED") then
+                amount = select(8, ...);
+            end
+
+            if amount then
+                local ts = roundToInteger(GetTime())
+                if not damageHistory[ts] then
+                    damageHistory[ts] = amount
+                else
+                    damageHistory[ts] = damageHistory[ts] + amount
+                end
+            end
+        end
+    end
+
+
+    local lastCheckTime = 0
+    local lastAmount
+    function NugHealth:GatherResolveDamage(t)
+        local timeframeBorder = roundToInteger(GetTime()-t)
+        local acc = 0
+        if timeframeBorder == lastCheckTime then return lastAmount end
+
+        for ts, amount in pairs(damageHistory) do
+            if ts < timeframeBorder then
+                damageHistory[ts] = nil
+            else
+                acc = acc + amount
+            end
+        end
+        lastCheckTime = timeframeBorder
+        lastAmount = acc
+
+        return acc
+    end
+end
