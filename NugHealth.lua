@@ -32,7 +32,7 @@ local defaults = {
         x = 0,
         y = 0,
         showResolve = true,
-        resolveLimit = 30,
+        resolveLimit = 40,
         staggerLimit = 70,
         useCLH = false,
     -- }
@@ -125,11 +125,11 @@ end
 function NugHealth.SPELLS_CHANGED(self, event)
     local _, class = UnitClass("player")
     local spec = GetSpecialization()
-    if  (class == "WARRIOR" and spec == 3) or 
-        (class == "DEATHKNIGHT" and spec == 1) or 
-        (class == "PALADIN" and spec == 2) or 
-        (class == "DRUID" and spec == 3) or 
-        (class == "DEMONHUNTER" and spec == 2) or 
+    if  (class == "WARRIOR" and spec == 3) or
+        (class == "DEATHKNIGHT" and spec == 1) or
+        (class == "PALADIN" and spec == 2) or
+        (class == "DRUID" and spec == 3) or
+        (class == "DEMONHUNTER" and spec == 2) or
         (class == "MONK" and spec == 1)
     then
         self:Enable()
@@ -154,7 +154,7 @@ function NugHealth.ResolveOnUpdate(self, time)
 
     local v = NugHealth:GatherResolveDamage(5)/UnitHealthMax("player") --damage during past 5seconds relative to max health
     local vp = v*100/resolveMaxPercent
-   
+
     self.resolve:SetValue(vp)
     self.resolve:SetStatusBarColor(PercentColor(vp*1.5))
 end
@@ -176,14 +176,14 @@ function NugHealth.StaggerOnUpdate(self, time)
 
 
     -- local stagger = (UnitStagger("player")/UnitHealthMax("player")) * staggerMul
-    local currentStagger = 0
-    for i=1,100 do
-        local name, _,_, count, _, duration, expirationTime, caster, _,_, spellID, _, _, _, st1, staggerValue = UnitDebuff("player", i)
-        if spellID == 124273 or spellID == 124274 or spellID == 124275 then
-            currentStagger = staggerValue --*duration
-        end
-    end
-    -- local currentStagger = UnitStagger("player")
+    -- local currentStagger = 0
+    -- for i=1,100 do
+    --     local name, _,_, count, _, duration, expirationTime, caster, _,_, spellID, _, _, _, st1, staggerValue = UnitDebuff("player", i)
+    --     if spellID == 124273 or spellID == 124274 or spellID == 124275 then
+    --         currentStagger = staggerValue --*duration
+    --     end
+    -- end
+    local currentStagger = UnitStagger("player")
 
     local stagger = (currentStagger/UnitHealthMax("player")) * staggerMul
     -- local name, _,_, count, _, duration, expirationTime, caster, _,_,
@@ -197,6 +197,7 @@ function NugHealth.StaggerOnUpdate(self, time)
     end
     self.power:SetColor(PercentColor(stagger))
 end
+
 local function MakeSetColor(mul)
     return function(self, r,g,b)
         self:SetStatusBarColor(r,g,b)
@@ -229,7 +230,7 @@ function NugHealth:Enable()
         self.timeout = 0.3
         self:SetScript("OnUpdate", NugHealth.ResolveOnUpdate)
     end
-    
+
     if select(2, UnitClass"player") == "MONK" then
         self.timeout = 0.05
         self:SetScript("OnUpdate", NugHealth.StaggerOnUpdate)
@@ -275,7 +276,7 @@ function NugHealth:Enable()
         self.power:SetColor(.7, .2, .2)
         self:RegisterUnitEvent("UNIT_AURA", "player");
     end
-    
+
     -- self:RegisterUnitEvent("UNIT_ATTACK_POWER", "player");
     -- self:RegisterUnitEvent("UNIT_RAGE", "player");
 
@@ -367,7 +368,7 @@ function NugHealth.Create(self)
     hp:SetMinMaxValues(0,1)
     hp:SetOrientation("VERTICAL")
     hp:SetValue(50)
-    
+
     local hpbg = hp:CreateTexture(nil,"ARTWORK",nil,-8)
     hpbg:SetAllPoints(hp)
     hpbg:SetTexture(texture)
@@ -427,7 +428,7 @@ function NugHealth.Create(self)
     at:SetHeight(self:GetHeight()*vmul)
     at:SetPoint("CENTER",self,"CENTER",0,0)
     at:SetAlpha(0)
-    
+
     local sag = at:CreateAnimationGroup()
     sag:SetLooping("BOUNCE")
     local sa1 = sag:CreateAnimation("Alpha")
@@ -525,7 +526,7 @@ function NugHealth.Create(self)
     }
     powerbar:SetBackdrop(backdrop)
     powerbar:SetBackdropColor(0, 0, 0, 1)
-    
+
     local pbbg = powerbar:CreateTexture(nil,"ARTWORK",nil,-3)
     pbbg:SetAllPoints(powerbar)
     pbbg:SetTexture("Interface\\Addons\\NugHealth\\white")
@@ -545,7 +546,7 @@ function NugHealth.Create(self)
     self.power = powerbar
 
 
-    
+
     self:EnableMouse(false)
     self:RegisterForDrag("LeftButton")
     self:SetMovable(true)
@@ -667,7 +668,7 @@ NugHealth.Commands = {
 
 function NugHealth.SlashCmd(msg)
     k,v = string.match(msg, "([%w%+%-%=]+) ?(.*)")
-    if not k or k == "help" then 
+    if not k or k == "help" then
         print([[Usage:
           |cff55ffff/nhe unlock|r
           |cff55ff55/nhe lock|r
@@ -679,10 +680,10 @@ function NugHealth.SlashCmd(msg)
     end
     if NugHealth.Commands[k] then
         NugHealth.Commands[k](v)
-    end    
+    end
 end
 
-do 
+do
     local damageHistory = {}
     local math_floor = math.floor
     local roundToInteger = function(v) return math_floor(v*10+.1) end
