@@ -32,7 +32,7 @@ local defaults = {
         x = 0,
         y = 0,
         showResolve = true,
-        resolveLimit = 40,
+        resolveLimit = 180,
         staggerLimit = 70,
         useCLH = false,
     -- }
@@ -153,6 +153,7 @@ function NugHealth.ResolveOnUpdate(self, time)
     self._elapsed = 0
 
     local v = NugHealth:GatherResolveDamage(5)/UnitHealthMax("player") --damage during past 5seconds relative to max health
+	-- ChatFrame4:AddMessage(string.format("CURRENT: %f %d", v, NugHealth:GatherResolveDamage(5)))
     local vp = v*100/resolveMaxPercent
 
     self.resolve:SetValue(vp)
@@ -706,10 +707,16 @@ do
             --     amount = select(4, ...) - select(5, ...) -- heal amount - overheal
             --     if amount == 0 then return end
             elseif(eventType == "SPELL_ABSORBED") then
-                amount = select(8, ...);
+				local numArg = select("#",...)
+				if numArg == 8 then
+                	amount = select(8, ...);
+				else
+					amount = select(11, ...);
+				end
             end
 
             if amount then
+				-- ChatFrame4:AddMessage(string.format("DAMAGE: %d", amount))
                 local ts = roundToInteger(GetTime())
                 if not damageHistory[ts] then
                     damageHistory[ts] = amount
