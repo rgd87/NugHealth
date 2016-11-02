@@ -1,3 +1,7 @@
+7.1.0:
+ - /nughealth lowhpcolor command
+ - stagger now can extend by up to 150% of max size
+
 7.0.2:
  - Fixed a bug with absorbed damage from spell that caused incorrect 
 damage values
