@@ -9,6 +9,7 @@ local DB_VERSION = 1
 local UnitHealth = UnitHealth
 local UnitHealthOriginal = UnitHealth
 local UnitHealthMax = UnitHealthMax
+local lowhpcolor = false
 
 
 local vengeanceMinRange = 7000
@@ -33,8 +34,9 @@ local defaults = {
         y = 0,
         showResolve = true,
         resolveLimit = 180,
-        staggerLimit = 70,
+        staggerLimit = 100,
         useCLH = false,
+		lowhpcolor = true,
     -- }
 }
 
@@ -87,6 +89,7 @@ function NugHealth.ADDON_LOADED(self,event,arg1)
         resolveMaxPercent = NugHealthDB.resolveLimit
         staggerMul = 100/NugHealthDB.staggerLimit
 
+		lowhpcolor = NugComboBarDB.lowhpcolor
         -- self:RegisterUnitEvent("UNIT_HEALTH", "player")
         -- self:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
         -- if select(2, UnitClass"player") == "MONK" then
@@ -197,6 +200,7 @@ function NugHealth.StaggerOnUpdate(self, time)
         self.power:Show()
     end
     self.power:SetColor(PercentColor(stagger))
+	self.power:Extend(stagger)
 end
 
 local function MakeSetColor(mul)
@@ -319,17 +323,21 @@ function NugHealth.UNIT_HEALTH(self, event)
         if vp < 0.2 then
             self.glowanim:SetDuration(0.2)
             if not self.glow:IsPlaying() then
+				if NugHealthDB.lowhpcolor then self.health:SetColor(1,.1,.1) end
                 self.glowanim.pending_stop = false
                 self.glow:Play()
             end
         elseif vp < 0.35 then
             self.glowanim:SetDuration(0.4)
+
             if not self.glow:IsPlaying() then
+				if NugHealthDB.lowhpcolor then self.health:SetColor(.9,0,0) end
                 self.glowanim.pending_stop = false
                 self.glow:Play()
             end
         else
             if self.glow:IsPlaying() then
+				self.health:RestoreColor()
                 self.glowanim.pending_stop = true
             end
         end
@@ -352,8 +360,10 @@ function NugHealth.PLAYER_REGEN_ENABLED(self, event)
 end
 
 function NugHealth.Create(self)
+	local height = 80
+
     self:SetWidth(20)
-    self:SetHeight(80)
+    self:SetHeight(height)
     local backdrop = {
         bgFile = "Interface\\Addons\\NugHealth\\white", tile = true, tileSize = 0,
         insets = {left = -2, right = -2, top = -2, bottom = -2},
@@ -404,13 +414,19 @@ function NugHealth.Create(self)
         self:SetStatusBarColor(r*0.2,g*0.2,b*0.2)
         self.bg:SetVertexColor(r,g,b)
     end
-    if NugHealthDB.classcolor then
-        local _, class = UnitClass("player")
-        local c = RAID_CLASS_COLORS[class]
-        hp:SetColor(c.r,c.g,c.b)
-    else
-        hp:SetColor(unpack(NugHealthDB.healthcolor))
-    end
+
+	hp.RestoreColor = function(self)
+		if NugHealthDB.classcolor then
+	        local _, class = UnitClass("player")
+	        local c = RAID_CLASS_COLORS[class]
+	        self:SetColor(c.r,c.g,c.b)
+	    else
+	        self:SetColor(unpack(NugHealthDB.healthcolor))
+	    end
+	end
+
+	hp:RestoreColor()
+
 
     self.health = hp
 
@@ -514,8 +530,19 @@ function NugHealth.Create(self)
 
     local powerbar = CreateFrame("StatusBar", nil, self)
     powerbar:SetWidth(7)
-    powerbar:SetPoint("TOPLEFT",self,"TOPRIGHT",1,0)
-    powerbar:SetPoint("BOTTOMLEFT",self,"BOTTOMRIGHT",1,0)
+    -- powerbar:SetPoint("TOPLEFT",self,"TOPRIGHT",1,0)
+    powerbar:SetPoint("BOTTOMLEFT",self,"BOTTOMRIGHT",2,0)
+	powerbar:SetHeight(height)
+	powerbar.baseheight = height
+	powerbar.Extend = function(self, v)
+		if v > 1.5 then v = 1.5 end
+		if v > 1 then
+			self:SetHeight(self.baseheight*v)
+		else
+			self:SetHeight(self.baseheight)
+		end
+	end
+
     powerbar:SetStatusBarTexture("Interface\\Addons\\NugHealth\\white")
     powerbar:GetStatusBarTexture():SetDrawLayer("ARTWORK",-2)
     powerbar:SetOrientation("VERTICAL")
@@ -523,7 +550,7 @@ function NugHealth.Create(self)
     powerbar:SetValue(0)
     local backdrop = {
         bgFile = "Interface\\Addons\\NugHealth\\white", tile = true, tileSize = 0,
-        insets = {left = -1, right = -2, top = -2, bottom = -2},
+        insets = {left = -2, right = -2, top = -2, bottom = -2},
     }
     powerbar:SetBackdrop(backdrop)
     powerbar:SetBackdropColor(0, 0, 0, 1)
@@ -602,13 +629,11 @@ NugHealth.Commands = {
     end,
     ["classcolor"] = function(v)
         NugHealthDB.classcolor = not NugHealthDB.classcolor
-        if NugHealthDB.classcolor then
-            local _, class = UnitClass("player")
-            local c = RAID_CLASS_COLORS[class]
-            NugHealth.health:SetColor(c.r,c.g,c.b)
-        else
-            NugHealth.health:SetColor(unpack(NugHealthDB.healthcolor))
-        end
+        NugHealth.health:RestoreColor()
+    end,
+	["lowhpcolor"] = function(v)
+        NugHealthDB.lowhpcolor = not NugHealthDB.lowhpcolor
+        lowhpcolor = NugHealthDB.lowhpcolor
     end,
 
     ["healthcolor"] = function(v)
@@ -674,6 +699,9 @@ function NugHealth.SlashCmd(msg)
           |cff55ffff/nhe unlock|r
           |cff55ff55/nhe lock|r
           |cff55ff22/nhe useclh - use LibCombatLogHealth
+          |cff55ff22/nhe classcolor
+          |cff55ff22/nhe healthcolor - use custom color
+		  |cff55ff22/nhe lowhpcolor - use custom color
           |cff55ff22/nhe resolve - show resolve 5s reimplementation |r
           |cff55ff22/nhe resolvelimit <20-500> - upper limit of resolve bar in selfheal boost percents|r
           |cff55ff22/nhe staggerlimit <10-100> - upper limit of stagger bar in player max health percents|r]]
