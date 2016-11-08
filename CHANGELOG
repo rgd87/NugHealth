@@ -1,3 +1,6 @@
+7.1.1:
+ - lowhpcolor setting bugfix
+
 7.1.0:
  - /nughealth lowhpcolor command
  - stagger now can extend by up to 150% of max size

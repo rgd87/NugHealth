@@ -89,7 +89,7 @@ function NugHealth.ADDON_LOADED(self,event,arg1)
         resolveMaxPercent = NugHealthDB.resolveLimit
         staggerMul = 100/NugHealthDB.staggerLimit
 
-		lowhpcolor = NugComboBarDB.lowhpcolor
+		lowhpcolor = NugHealthDB.lowhpcolor
         -- self:RegisterUnitEvent("UNIT_HEALTH", "player")
         -- self:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
         -- if select(2, UnitClass"player") == "MONK" then
