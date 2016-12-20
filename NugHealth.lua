@@ -3,7 +3,17 @@ NugHealth = CreateFrame("Frame","NugHealth", UIParent)
 NugHealth:SetScript("OnEvent", function(self, event, ...)
 	return self[event](self, event, ...)
 end)
-NugHealth:RegisterEvent("ADDON_LOADED")
+
+local _, class = UnitClass("player")
+if  (class == "WARRIOR") or
+	(class == "DEATHKNIGHT") or
+	(class == "PALADIN") or
+	(class == "DRUID") or
+	(class == "DEMONHUNTER") or
+	(class == "MONK")
+then
+	NugHealth:RegisterEvent("ADDON_LOADED")
+end
 
 local DB_VERSION = 1
 local UnitHealth = UnitHealth
@@ -604,6 +614,7 @@ local ParseOpts = function(str)
 end
 NugHealth.Commands = {
     ["unlock"] = function(v)
+		if NugHealth.isDisabled then print("NugHealth is disabled for non-tank classes"); return end
         NugHealth:EnableMouse(true)
         NugHealth:Show()
     end,
@@ -611,7 +622,7 @@ NugHealth.Commands = {
         local num = tonumber(v)
         if not num or num < 5 or num > 300 then
             num = 180
-            print('correct range is 5-300')
+            print('correct range is 5-500')
         end
         NugHealthDB.resolveLimit = num
         resolveMaxPercent = NugHealthDB.resolveLimit
@@ -701,10 +712,10 @@ function NugHealth.SlashCmd(msg)
           |cff55ff22/nhe useclh - use LibCombatLogHealth
           |cff55ff22/nhe classcolor
           |cff55ff22/nhe healthcolor - use custom color
-		  |cff55ff22/nhe lowhpcolor - use custom color
-          |cff55ff22/nhe resolve - show resolve 5s reimplementation |r
-          |cff55ff22/nhe resolvelimit <20-500> - upper limit of resolve bar in selfheal boost percents|r
-          |cff55ff22/nhe staggerlimit <10-100> - upper limit of stagger bar in player max health percents|r]]
+          |cff55ff22/nhe lowhpcolor
+          |cff55ff22/nhe resolve - toggle recent dmg taken|r
+          |cff55ff22/nhe resolvelimit <5-500> - damage taken in last 5 sec relative to X max health percent
+          |cff55ff22/nhe staggerlimit <10-500> - upper limit of stagger bar in player max health percent|r]]
         )
     end
     if NugHealth.Commands[k] then
