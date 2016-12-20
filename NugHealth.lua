@@ -121,6 +121,15 @@ function NugHealth.ADDON_LOADED(self,event,arg1)
         SLASH_NUGHEALTH1= "/nughealth"
         SLASH_NUGHEALTH2= "/nhe"
         SlashCmdList["NUGHEALTH"] = self.SlashCmd
+
+		local f = CreateFrame('Frame', nil, InterfaceOptionsFrame)
+		f:SetScript('OnShow', function(self)
+			self:SetScript('OnShow', nil)
+
+			if not NugHealth.optionsPanel then
+				NugHealth.optionsPanel = NugHealth:CreateGUI()
+			end
+		end)
     end
 end
 
@@ -614,11 +623,18 @@ local ParseOpts = function(str)
 end
 NugHealth.Commands = {
     ["unlock"] = function(v)
-		if NugHealth.isDisabled then print("NugHealth is disabled for non-tank classes"); return end
         NugHealth:EnableMouse(true)
         NugHealth:Show()
     end,
-    ["resolvelimit"] = function(v)
+	["gui"] = function(v)
+        local self = NugHealth
+		if not self.optionsPanel then
+			self.optionsPanel = self:CreateGUI()
+		end
+		InterfaceOptionsFrame_OpenToCategory (self.optionsPanel)
+		InterfaceOptionsFrame_OpenToCategory (self.optionsPanel)
+    end,
+    ["resolvelimit"] = function(v, silent)
         local num = tonumber(v)
         if not num or num < 5 or num > 300 then
             num = 180
@@ -626,9 +642,9 @@ NugHealth.Commands = {
         end
         NugHealthDB.resolveLimit = num
         resolveMaxPercent = NugHealthDB.resolveLimit
-        print("New resolve limit =", num)
+        if not silent then print("New resolve limit =", num) end
     end,
-    ["staggerlimit"] = function(v)
+    ["staggerlimit"] = function(v, silent)
         local num = tonumber(v)
         if not num or num < 5 or num > 100 then
             num = defaults.staggerLimit
@@ -636,7 +652,7 @@ NugHealth.Commands = {
         end
         NugHealthDB.staggerLimit = num
         staggerMul = 100/NugHealthDB.staggerLimit
-        print("New stagger limit =", num)
+        if not silent then print("New stagger limit =", num) end
     end,
     ["classcolor"] = function(v)
         NugHealthDB.classcolor = not NugHealthDB.classcolor
@@ -674,9 +690,9 @@ NugHealth.Commands = {
 
     end,
 
-    ["resolve"] = function(v)
+    ["resolve"] = function(v, silent)
         NugHealthDB.showResolve = not NugHealthDB.showResolve
-        print("show resolve :", NugHealthDB.showResolve)
+        if not silent then print("show resolve :", NugHealthDB.showResolve) end
         NugHealth:SPELLS_CHANGED()
     end,
 
@@ -686,13 +702,13 @@ NugHealth.Commands = {
             UnitHealth = UnitHealthOriginal
             NugHealth:RegisterUnitEvent("UNIT_HEALTH", "player")
             local LibCLHealth = LibStub("LibCombatLogHealth-1.0")
-            LibCLHealth.UnregisterCallback(f, "COMBAT_LOG_HEALTH")
+            LibCLHealth.UnregisterCallback(NugHealth, "COMBAT_LOG_HEALTH")
             print("Fast health updates enabled")
         else
             NugHealth:UnregisterEvent("UNIT_HEALTH")
             local LibCLHealth = LibStub("LibCombatLogHealth-1.0")
             UnitHealth = LibCLHealth.UnitHealth
-            LibCLHealth.RegisterCallback(f, "COMBAT_LOG_HEALTH", function(event, unit, eventType)
+            LibCLHealth.RegisterCallback(NugHealth, "COMBAT_LOG_HEALTH", function(event, unit, eventType)
                 return NugHealth:UNIT_HEALTH(eventType, unit)
             end)
             print("Fast health updates disabled")
@@ -786,4 +802,121 @@ do
 
         return acc
     end
+end
+
+
+function NugHealth:CreateGUI()
+	local opt = {
+        type = 'group',
+        name = "NugHealth Settings",
+        order = 1,
+        args = {
+			unlock = {
+				name = "Unlock",
+				type = "execute",
+				desc = "Unlock anchor for dragging",
+				func = function() NugHealth.Commands.unlock() end,
+				order = 1,
+			},
+			lock = {
+				name = "Lock",
+				type = "execute",
+				desc = "Lock anchor",
+				func = function() NugHealth.Commands.lock() end,
+				order = 2,
+			},
+            anchors = {
+                type = "group",
+                name = " ",
+                guiInline = true,
+                order = 3,
+                args = {
+					classColor = {
+                        name = "Class Color",
+                        type = "toggle",
+                        get = function(info) return NugHealthDB.classcolor end,
+                        set = function(info, v)
+							NugHealthDB.classcolor = not NugHealthDB.classcolor
+							NugHealth.health:RestoreColor()
+						end,
+                        order = 1,
+                    },
+					customcolor = {
+                        name = "Custom Color",
+                        type = 'color',
+						order = 2,
+                        get = function(info)
+							local r,g,b = unpack(NugHealthDB.healthcolor)
+                            return r,g,b
+                        end,
+                        set = function(info, r, g, b)
+							NugHealthDB.classcolor = false
+                            NugHealthDB.healthcolor = {r,g,b}
+							NugHealth.health:RestoreColor()
+                        end,
+                    },
+                    lowhpcolor = {
+                        name = "Low HP Color",
+                        type = "toggle",
+                        desc = "Change healthbar color when below 35%",
+                        get = function(info) return NugHealthDB.lowhpcolor end,
+                        set = function(info, v) NugHealth.Commands.lowhpcolor(v, true) end,
+                        order = 3,
+                    },
+                    resolve = {
+                        name = "Resolve",
+                        type = "toggle",
+                        desc = "Show recent damage taken bar",
+                        get = function(info) return NugHealthDB.showResolve end,
+                        set = function(info, v) NugHealth.Commands.resolve(nil, true) end,
+                        order = 4,
+                    },
+					resolveLimit = {
+                        name = "Resolve Limit",
+                        type = "range",
+						desc = "Damage taken in last 5 sec relative to X max health percent",
+						width = "double",
+                        get = function(info) return NugHealthDB.resolveLimit end,
+                        set = function(info, v)
+							NugHealth.Commands.resolvelimit(v, true)
+						end,
+                        min = 10,
+                        max = 500,
+                        step = 10,
+                        order = 5,
+                    },
+					clh = {
+                        name = "Use LibCombatLogHealth",
+                        type = "toggle",
+                        desc = "Fast health updates for nerds",
+                        get = function(info) return NugHealthDB.useCLH end,
+                        set = function(info, v) NugHealth.Commands.useclh() end,
+                        order = 6,
+                    },
+					staggerLimit = {
+                        name = "Stagger Limit",
+                        type = "range",
+						desc = "Upper limit of Monk's Stagger bar in player max health percent",
+						width = "double",
+                        get = function(info) return NugHealthDB.staggerLimit end,
+                        set = function(info, v)
+							NugHealth.Commands.staggerlimit(v, true)
+						end,
+                        min = 20,
+                        max = 300,
+                        step = 10,
+                        order = 7,
+                    },
+                },
+            }, --
+        },
+    }
+
+	local AceConfigRegistry = LibStub("AceConfigRegistry-3.0")
+    AceConfigRegistry:RegisterOptionsTable("NugHealthOptions", opt)
+
+    local AceConfigDialog = LibStub("AceConfigDialog-3.0")
+    local panelFrame = AceConfigDialog:AddToBlizOptions("NugHealthOptions", "NugHealth")
+
+    return panelFrame
 end
