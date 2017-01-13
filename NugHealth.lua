@@ -941,7 +941,7 @@ function NugHealth:CreateGUI()
                         end,
                         min = 10,
                         max = 120,
-                        step = 5,
+                        step = 1,
                         order = 8,
                     },
                     height = {
@@ -954,7 +954,7 @@ function NugHealth:CreateGUI()
                         end,
                         min = 30,
                         max = 160,
-                        step = 5,
+                        step = 1,
                         order = 9,
                     },
                     absorb_width = {
