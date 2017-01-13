@@ -35,17 +35,20 @@ local playerGUID = 0
 
 local defaults = {
     -- anchor = {
+        height = 80,
+        width = 20,
+        absorb_width = 5,
         point = "CENTER",
         relative_point = "CENTER",
         frame = "UIParent",
-        classcolor = true,
+        classcolor = false,
         healthcolor = { 0.78, 0.61, 0.43 },
         x = 0,
         y = 0,
         showResolve = true,
         resolveLimit = 180,
         staggerLimit = 100,
-        useCLH = false,
+        useCLH = true,
 		lowhpcolor = true,
     -- }
 }
@@ -379,9 +382,11 @@ function NugHealth.PLAYER_REGEN_ENABLED(self, event)
 end
 
 function NugHealth.Create(self)
-	local height = 80
+	local height = NugHealthDB.height
+    local width = NugHealthDB.width
+    local absorb_width = NugHealthDB.absorb_width
 
-    self:SetWidth(20)
+    self:SetWidth(width)
     self:SetHeight(height)
     local backdrop = {
         bgFile = "Interface\\Addons\\NugHealth\\white", tile = true, tileSize = 0,
@@ -476,6 +481,7 @@ function NugHealth.Create(self)
         if self.pending_stop then self:GetParent():Stop() end
     end)
 
+    self.glowtex = at
     self.glow = sag
     self.glowanim = sa1
 
@@ -517,7 +523,7 @@ function NugHealth.Create(self)
     local absorb = CreateFrame("Frame", nil, self)
     absorb:SetParent(self)
     absorb:SetPoint("TOPLEFT",self,"TOPLEFT",-3,0)
-    absorb:SetWidth(4)
+    absorb:SetWidth(absorb_width)
 
     local at = absorb:CreateTexture(nil, "ARTWORK", nil, -4)
     at:SetTexture[[Interface\AddOns\NugHealth\white]]
@@ -591,6 +597,22 @@ function NugHealth.Create(self)
     powerbar:Hide()
 
     self.power = powerbar
+
+    self.Resize = function(self)
+        local height = NugHealthDB.height
+        local width = NugHealthDB.width
+        local absorb_width = NugHealthDB.absorb_width
+
+        self:SetWidth(width)
+        self:SetHeight(height)
+        self.power:SetHeight(height)
+        self.power.baseheight = height
+        self.absorb.maxheight = height
+        self.absorb:SetWidth(absorb_width)
+        self.resolve.maxheight = height
+        self.glowtex:SetWidth(width*hmul)
+        self.glowtex:SetHeight(height*vmul)
+    end
 
 
 
@@ -725,6 +747,7 @@ function NugHealth.SlashCmd(msg)
         print([[Usage:
           |cff55ffff/nhe unlock|r
           |cff55ff55/nhe lock|r
+          |cffffaaaa/nhe gui|r
           |cff55ff22/nhe useclh - use LibCombatLogHealth
           |cff55ff22/nhe classcolor
           |cff55ff22/nhe healthcolor - use custom color
@@ -906,6 +929,46 @@ function NugHealth:CreateGUI()
                         max = 300,
                         step = 10,
                         order = 7,
+                    },
+
+                    width = {
+                        name = "Width",
+                        type = "range",
+                        get = function(info) return NugHealthDB.width end,
+                        set = function(info, v)
+                            NugHealthDB.width = tonumber(v)
+                            NugHealth:Resize()
+                        end,
+                        min = 10,
+                        max = 120,
+                        step = 5,
+                        order = 8,
+                    },
+                    height = {
+                        name = "Height",
+                        type = "range",
+                        get = function(info) return NugHealthDB.height end,
+                        set = function(info, v)
+                            NugHealthDB.height = tonumber(v)
+                            NugHealth:Resize()
+                        end,
+                        min = 30,
+                        max = 160,
+                        step = 5,
+                        order = 9,
+                    },
+                    absorb_width = {
+                        name = "Absorb Width",
+                        type = "range",
+                        get = function(info) return NugHealthDB.absorb_width end,
+                        set = function(info, v)
+                            NugHealthDB.absorb_width = tonumber(v)
+                            NugHealth:Resize()
+                        end,
+                        min = 2,
+                        max = 12,
+                        step = 1,
+                        order = 10,
                     },
                 },
             }, --
