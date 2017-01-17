@@ -4,17 +4,9 @@ NugHealth:SetScript("OnEvent", function(self, event, ...)
 	return self[event](self, event, ...)
 end)
 
-local _, class = UnitClass("player")
-if  (class == "WARRIOR") or
-	(class == "DEATHKNIGHT") or
-	(class == "PALADIN") or
-	(class == "DRUID") or
-	(class == "DEMONHUNTER") or
-	(class == "MONK")
-then
-	NugHealth:RegisterEvent("ADDON_LOADED")
-end
+NugHealth:RegisterEvent("ADDON_LOADED")
 
+local LibCLHealth = LibStub("LibCombatLogHealth-1.0")
 local DB_VERSION = 1
 local UnitHealth = UnitHealth
 local UnitHealthOriginal = UnitHealth
@@ -42,6 +34,7 @@ local defaults = {
         relative_point = "CENTER",
         frame = "UIParent",
         classcolor = false,
+        allSpecs = false,
         healthcolor = { 0.78, 0.61, 0.43 },
         x = 0,
         y = 0,
@@ -103,21 +96,14 @@ function NugHealth.ADDON_LOADED(self,event,arg1)
         staggerMul = 100/NugHealthDB.staggerLimit
 
 		lowhpcolor = NugHealthDB.lowhpcolor
-        -- self:RegisterUnitEvent("UNIT_HEALTH", "player")
-        -- self:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
-        -- if select(2, UnitClass"player") == "MONK" then
-            -- self:SetScript("OnUpdate", NugHealth.StaggerOnUpdate)
-        -- end
-        -- self:RegisterUnitEvent("UNIT_ATTACK_POWER", "player");
-        -- self:RegisterUnitEvent("UNIT_RAGE", "player");
-        -- self:RegisterUnitEvent("UNIT_AURA", "player");
+
         NugHealth:SPELLS_CHANGED()
 
 
-        self:RegisterEvent("PLAYER_LOGIN")
         self:RegisterEvent("PLAYER_LOGOUT")
-        self:RegisterEvent("PLAYER_REGEN_ENABLED")
-        self:RegisterEvent("PLAYER_REGEN_DISABLED")
+        -- self:RegisterEvent("PLAYER_LOGIN") --registered in :Enable()
+        -- self:RegisterEvent("PLAYER_REGEN_ENABLED")
+        -- self:RegisterEvent("PLAYER_REGEN_DISABLED")
 
         self:RegisterEvent("SPELLS_CHANGED")
 
@@ -150,12 +136,13 @@ end
 function NugHealth.SPELLS_CHANGED(self, event)
     local _, class = UnitClass("player")
     local spec = GetSpecialization()
-    if  (class == "WARRIOR" and spec == 3) or
+    if  NugHealthDB.allSpecs or
+       ((class == "WARRIOR" and spec == 3) or
         (class == "DEATHKNIGHT" and spec == 1) or
         (class == "PALADIN" and spec == 2) or
         (class == "DRUID" and spec == 3) or
         (class == "DEMONHUNTER" and spec == 2) or
-        (class == "MONK" and spec == 1)
+        (class == "MONK" and spec == 1))
     then
         self:Enable()
     else
@@ -240,14 +227,18 @@ end
 function NugHealth:Enable()
     playerGUID = UnitGUID("player")
 
-    self:RegisterUnitEvent("UNIT_HEALTH", "player")
-    local LibCLHealth = LibStub("LibCombatLogHealth-1.0")
     if LibCLHealth and NugHealthDB.useCLH then
         self:UnregisterEvent("UNIT_HEALTH")
         UnitHealth = LibCLHealth.UnitHealth
         LibCLHealth.RegisterCallback(self, "COMBAT_LOG_HEALTH", function(event, unit, eventType)
             return NugHealth:UNIT_HEALTH(eventType, unit)
         end)
+    else
+        self:RegisterUnitEvent("UNIT_HEALTH", "player")
+        UnitHealth = UnitHealthOriginal
+        if LibCLHealth then
+            LibCLHealth.UnregisterCallback(self, "COMBAT_LOG_HEALTH")
+        end
     end
     -- self:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
     self:RegisterUnitEvent("UNIT_ABSORB_AMOUNT_CHANGED", "player")
@@ -718,17 +709,21 @@ NugHealth.Commands = {
         NugHealth:SPELLS_CHANGED()
     end,
 
+    ["allspecs"] = function(v, silent)
+        NugHealthDB.allSpecs = not NugHealthDB.allSpecs
+        NugHealth:SPELLS_CHANGED()
+    end,
+
+
     ["useclh"] = function(v)
         NugHealthDB.useCLH = not NugHealthDB.useCLH
         if NugHealthDB.useCLH then
             UnitHealth = UnitHealthOriginal
             NugHealth:RegisterUnitEvent("UNIT_HEALTH", "player")
-            local LibCLHealth = LibStub("LibCombatLogHealth-1.0")
             LibCLHealth.UnregisterCallback(NugHealth, "COMBAT_LOG_HEALTH")
             print("Fast health updates enabled")
         else
             NugHealth:UnregisterEvent("UNIT_HEALTH")
-            local LibCLHealth = LibStub("LibCombatLogHealth-1.0")
             UnitHealth = LibCLHealth.UnitHealth
             LibCLHealth.RegisterCallback(NugHealth, "COMBAT_LOG_HEALTH", function(event, unit, eventType)
                 return NugHealth:UNIT_HEALTH(eventType, unit)
@@ -969,6 +964,15 @@ function NugHealth:CreateGUI()
                         max = 12,
                         step = 1,
                         order = 10,
+                    },
+                    allSpecs = {
+                        name = "Show for all specializations",
+                        type = "toggle",
+                        width = "double",
+                        desc = "not just tanks",
+                        get = function(info) return NugHealthDB.allSpecs end,
+                        set = function(info, v) NugHealth.Commands.allspecs() end,
+                        order = 11,
                     },
                 },
             }, --
