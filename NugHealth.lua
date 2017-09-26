@@ -221,7 +221,11 @@ end
 
 
 function NugHealth.UNIT_ABSORB_AMOUNT_CHANGED(self, event, unit)
-    self.absorb:SetValue(UnitGetTotalAbsorbs(unit)/ UnitHealthMax(unit))
+    local a,hm = UnitGetTotalAbsorbs(unit), UnitHealthMax(unit)
+    local h = UnitHealth(unit)
+
+    self.absorb:SetValue(a/hm, h/hm)
+    self.absorb2:SetValue((h+a)/hm)
 end
 
 function NugHealth:Enable()
@@ -321,10 +325,13 @@ end
 function NugHealth.UNIT_HEALTH(self, event)
     local h = UnitHealth("player")
     local mh = UnitHealthMax("player")
+    local a = UnitGetTotalAbsorbs("player")
     if mh == 0 then return end
     local vp = h/mh
 
     self.health:SetValue(vp)
+    self.absorb:SetValue(a/mh, vp)
+    self.absorb2:SetValue((h+a)/mh)
     if vp >= self.healthlost.currentvalue or not UnitAffectingCombat("player") then
         self.healthlost.currentvalue = vp
         self.healthlost.endvalue = vp
@@ -529,11 +536,21 @@ function NugHealth.Create(self)
     atbg:SetPoint("BOTTOMRIGHT", at, "BOTTOMRIGHT", 1,-1)
 
     absorb.maxheight = self:GetHeight()
-    absorb.SetValue = function(self, p)
+    absorb.SetValue = function(self, p, h)
         if p > 1 then p = 1 end
         if p < 0 then p = 0 end
-        if p == 0 then self:Hide() else self:Show() end
+        if p <= 0.015 then self:Hide(); return; else self:Show() end
+
+        local missing_health_height = (1-h)*self.maxheight
+        local absorb_height = p*self.maxheight
+
         self:SetHeight(p*self.maxheight)
+
+        if absorb_height >= missing_health_height then
+            self:SetPoint("TOPLEFT", self:GetParent(), "TOPLEFT", -3 ,0)
+        else
+            self:SetPoint("TOPLEFT", self:GetParent(), "TOPLEFT", -3, -(missing_health_height - absorb_height))
+        end
     end
     absorb:SetValue(0)
 
@@ -542,6 +559,18 @@ function NugHealth.Create(self)
     end
 
     self.absorb = absorb
+
+    local absorb2 = CreateFrame("StatusBar", nil, self)
+    absorb2:SetPoint("BOTTOMLEFT",self,"BOTTOMLEFT",0,0)
+    absorb2:SetPoint("TOPRIGHT",self,"TOPRIGHT",0,0)
+    absorb2:SetStatusBarTexture("Interface\\AddOns\\NugHealth\\shieldtex")
+    absorb2:GetStatusBarTexture():SetDrawLayer("ARTWORK",-7)
+    absorb2:GetStatusBarTexture():SetVertTile(true)
+    absorb2:SetMinMaxValues(0,1)
+    absorb2:SetAlpha(0.65)
+    absorb2:SetOrientation("VERTICAL")
+    absorb2.parent = self
+    self.absorb2 = absorb2
 
 
     local powerbar = CreateFrame("StatusBar", nil, self)
