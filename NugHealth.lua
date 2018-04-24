@@ -269,35 +269,35 @@ function NugHealth:Enable()
         -- self:RegisterUnitEvent("UNIT_AURA", "player");
     end
 
-    if select(2, UnitClass"player") == "WARRIOR" then
-        self.power.auraname = GetSpellInfo(132404)
-        self.power:SetColor(80/255, 83/255, 150/255)
-        self:RegisterUnitEvent("UNIT_AURA", "player");
-    end
+    -- if select(2, UnitClass"player") == "WARRIOR" then
+    --     self.power.auraname = GetSpellInfo(132404)
+    --     self.power:SetColor(80/255, 83/255, 150/255)
+    --     self:RegisterUnitEvent("UNIT_AURA", "player");
+    -- end
 
-    if select(2, UnitClass"player") == "DEMONHUNTER" then
-        self.power.auraname = GetSpellInfo(203819)
-        self.power:SetColor(.7, 1, 0)
-        self:RegisterUnitEvent("UNIT_AURA", "player");
-    end
+    -- if select(2, UnitClass"player") == "DEMONHUNTER" then
+    --     self.power.auraname = GetSpellInfo(203819)
+    --     self.power:SetColor(.7, 1, 0)
+    --     self:RegisterUnitEvent("UNIT_AURA", "player");
+    -- end
 
-    if select(2, UnitClass"player") == "DEATHKNIGHT" then
-        -- self.power.auraname = GetSpellInfo(171049)
-        -- self.power:SetColor(.7, 0, 0)
-        -- self:RegisterUnitEvent("UNIT_AURA", "player");
-    end
+    -- if select(2, UnitClass"player") == "DEATHKNIGHT" then
+    --     -- self.power.auraname = GetSpellInfo(171049)
+    --     -- self.power:SetColor(.7, 0, 0)
+    --     -- self:RegisterUnitEvent("UNIT_AURA", "player");
+    -- end
 
-    if select(2, UnitClass"player") == "PALADIN" then
-        self.power.auraname = GetSpellInfo(132403)
-        self.power:SetColor( 226/255, 35/255, 103/255 )
-        self:RegisterUnitEvent("UNIT_AURA", "player");
-    end
+    -- if select(2, UnitClass"player") == "PALADIN" then
+    --     self.power.auraname = GetSpellInfo(132403)
+    --     self.power:SetColor( 226/255, 35/255, 103/255 )
+    --     self:RegisterUnitEvent("UNIT_AURA", "player");
+    -- end
 
-    if select(2, UnitClass"player") == "DRUID" then
-        self.power.auraname = GetSpellInfo(192081)
-        self.power:SetColor(.7, .2, .2)
-        self:RegisterUnitEvent("UNIT_AURA", "player");
-    end
+    -- if select(2, UnitClass"player") == "DRUID" then
+    --     self.power.auraname = GetSpellInfo(192081)
+    --     self.power:SetColor(.7, .2, .2)
+    --     self:RegisterUnitEvent("UNIT_AURA", "player");
+    -- end
 
     -- self:RegisterUnitEvent("UNIT_ATTACK_POWER", "player");
     -- self:RegisterUnitEvent("UNIT_RAGE", "player");
