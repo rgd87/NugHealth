@@ -418,6 +418,7 @@ function NugHealth.Create(self)
     -- hplost:SetStatusBarColor(1,1,1, .9)
 
     hplost.currentvalue = 0
+    hplost.endvalue = 0
     hplost:SetScript("OnUpdate", function(self, time)
         self._elapsed = (self._elapsed or 0) + time
         if self._elapsed < 0.05 then return end
