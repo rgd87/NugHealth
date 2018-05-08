@@ -309,18 +309,18 @@ function NugHealth:Enable()
     self.isDisabled = nil
 end
 
-function NugHealth.UNIT_AURA(self, event)
-        local name, _,_, count, _, duration, expirationTime, caster, _,_, spellID = UnitBuff("player", self.power.auraname)
+-- function NugHealth.UNIT_AURA(self, event)
+--         local name, _,_, count, _, duration, expirationTime, caster, _,_, spellID = UnitAura("player", self.power.auraname, "HELPFUL")
 
-        if name then
-            self.power.startTime = expirationTime - duration
-            self.power.endTime = expirationTime
-            self.power:SetMinMaxValues(0, duration)
-            self.power:Show()
-        else
-            self.power:Hide()
-        end
-end
+--         if name then
+--             self.power.startTime = expirationTime - duration
+--             self.power.endTime = expirationTime
+--             self.power:SetMinMaxValues(0, duration)
+--             self.power:Show()
+--         else
+--             self.power:Hide()
+--         end
+-- end
 
 function NugHealth.UNIT_HEALTH(self, event)
     local h = UnitHealth("player")
