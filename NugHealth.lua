@@ -222,13 +222,13 @@ local function MakeSetColor(mul)
 end
 
 
-function NugHealth.UNIT_HEAL_PREDICTION(self, event, unit)
-    local heals, hm = UnitGetIncomingHeals(unit), UnitHealthMax(unit)
-    local h = UnitHealth(unit)
-    -- print(heals, heals/hm)
+-- function NugHealth.UNIT_HEAL_PREDICTION(self, event, unit)
+--     local heals, hm = UnitGetIncomingHeals(unit), UnitHealthMax(unit)
+--     local h = UnitHealth(unit)
+--     -- print(heals, heals/hm)
 
-    self.incoming:SetValue(heals/hm, h/hm)
-end
+--     self.incoming:SetValue(heals/hm, h/hm)
+-- end
 
 function NugHealth.UNIT_ABSORB_AMOUNT_CHANGED(self, event, unit)
     local a,hm = UnitGetTotalAbsorbs(unit), UnitHealthMax(unit)
@@ -256,7 +256,7 @@ function NugHealth:Enable()
     end
     -- self:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
     self:RegisterUnitEvent("UNIT_ABSORB_AMOUNT_CHANGED", "player")
-    self:RegisterUnitEvent("UNIT_HEAL_PREDICTION", "player")
+    -- self:RegisterUnitEvent("UNIT_HEAL_PREDICTION", "player")
 
     if NugHealthDB.showResolve then
         self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
@@ -586,47 +586,47 @@ function NugHealth.Create(self)
     self.absorb2 = absorb2
 
 
-    local incoming = CreateFrame("Frame", nil, self)
-    incoming:SetParent(self)
-    incoming:SetPoint("TOPLEFT",self,"TOPLEFT",2,0)
-    incoming:SetWidth(incoming_width)
+    -- local incoming = CreateFrame("Frame", nil, self)
+    -- incoming:SetParent(self)
+    -- incoming:SetPoint("TOPLEFT",self,"TOPLEFT",2,0)
+    -- incoming:SetWidth(incoming_width)
 
-    local iht = incoming:CreateTexture(nil, "ARTWORK", nil, -4)
-    iht:SetTexture[[Interface\AddOns\NugHealth\white]]
-    iht:SetVertexColor(0.6, 1, 0.6, 1)
-    incoming.texture = iht
-    iht:SetAllPoints(incoming)
+    -- local iht = incoming:CreateTexture(nil, "ARTWORK", nil, -4)
+    -- iht:SetTexture[[Interface\AddOns\NugHealth\white]]
+    -- iht:SetVertexColor(0.6, 1, 0.6, 1)
+    -- incoming.texture = iht
+    -- iht:SetAllPoints(incoming)
 
-    local ihtbg = incoming:CreateTexture(nil, "ARTWORK", nil, -5)
-    ihtbg:SetTexture[[Interface\AddOns\NugHealth\white]]
-    ihtbg:SetVertexColor(0,0,0,1)
-    ihtbg:SetPoint("TOPLEFT", iht, "TOPLEFT", -1,1)
-    ihtbg:SetPoint("BOTTOMRIGHT", iht, "BOTTOMRIGHT", 1,-1)
+    -- local ihtbg = incoming:CreateTexture(nil, "ARTWORK", nil, -5)
+    -- ihtbg:SetTexture[[Interface\AddOns\NugHealth\white]]
+    -- ihtbg:SetVertexColor(0,0,0,1)
+    -- ihtbg:SetPoint("TOPLEFT", iht, "TOPLEFT", -1,1)
+    -- ihtbg:SetPoint("BOTTOMRIGHT", iht, "BOTTOMRIGHT", 1,-1)
 
-    incoming.maxheight = self:GetHeight()
-    incoming.SetValue = function(self, p, h)
-        if p > 1 then p = 1 end
-        if p < 0 then p = 0 end
-        if p <= 0.015 then self:Hide(); return; else self:Show() end
+    -- incoming.maxheight = self:GetHeight()
+    -- incoming.SetValue = function(self, p, h)
+    --     if p > 1 then p = 1 end
+    --     if p < 0 then p = 0 end
+    --     if p <= 0.015 then self:Hide(); return; else self:Show() end
 
-        local missing_health_height = (1-h)*self.maxheight
-        local incoming_height = p*self.maxheight
+    --     local missing_health_height = (1-h)*self.maxheight
+    --     local incoming_height = p*self.maxheight
 
-        self:SetHeight(p*self.maxheight)
+    --     self:SetHeight(p*self.maxheight)
 
-        if incoming_height >= missing_health_height then
-            self:SetPoint("TOPLEFT", self:GetParent(), "TOPLEFT", -3 ,0)
-        else
-            self:SetPoint("TOPLEFT", self:GetParent(), "TOPLEFT", -3, -(missing_health_height - incoming_height))
-        end
-    end
-    incoming:SetValue(0)
+    --     if incoming_height >= missing_health_height then
+    --         self:SetPoint("TOPLEFT", self:GetParent(), "TOPLEFT", -3 ,0)
+    --     else
+    --         self:SetPoint("TOPLEFT", self:GetParent(), "TOPLEFT", -3, -(missing_health_height - incoming_height))
+    --     end
+    -- end
+    -- incoming:SetValue(0)
 
-    incoming.SetStatusBarColor = function(self, r,g,b)
-        self.texture:SetVertexColor(r,g,b)
-    end
+    -- incoming.SetStatusBarColor = function(self, r,g,b)
+    --     self.texture:SetVertexColor(r,g,b)
+    -- end
 
-    self.incoming = incoming
+    -- self.incoming = incoming
     
 
 
