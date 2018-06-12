@@ -848,34 +848,31 @@ do
     local math_floor = math.floor
     local roundToInteger = function(v) return math_floor(v*10+.1) end
 
-    function NugHealth:COMBAT_LOG_EVENT_UNFILTERED(
-                    event, timestamp, eventType, hideCaster,
-                    srcGUID, srcName, srcFlags, srcFlags2,
-                    dstGUID, dstName, dstFlags, dstFlags2, ...)
+    function NugHealth:COMBAT_LOG_EVENT_UNFILTERED(event)
+
+        local timestamp, eventType, hideCaster,
+        srcGUID, srcName, srcFlags, srcFlags2,
+        dstGUID, dstName, dstFlags, dstFlags2,
+        arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11 = CombatLogGetCurrentEventInfo()
 
         if dstGUID == playerGUID then
             local amount
             if(eventType == "SWING_DAMAGE") then --autoattack
-                amount = (...); -- putting in braces will autoselect the first arg, no need to use select(1, ...);
+                amount = arg1; -- putting in braces will autoselect the first arg, no need to use select(1, ...);
             elseif(eventType == "SPELL_PERIODIC_DAMAGE" or eventType == "SPELL_DAMAGE"
             or eventType == "DAMAGE_SPLIT" or eventType == "DAMAGE_SHIELD") then
-                amount = select(4, ...);
+                amount = arg4
             elseif(eventType == "ENVIRONMENTAL_DAMAGE") then
-                amount = select(2, ...);
+                amount = arg2
             -- elseif(eventType == "SPELL_HEAL" or eventType == "SPELL_PERIODIC_HEAL") then
             --     amount = select(4, ...) - select(5, ...) -- heal amount - overheal
             --     if amount == 0 then return end
             elseif(eventType == "SPELL_ABSORBED") then
-				local numArg = select("#",...)
-				if numArg == 8 then
-                	amount = select(8, ...);
-				else
-					amount = select(11, ...);
-				end
+				amount = arg11 or arg8
             end
 
             if amount then
-				-- ChatFrame4:AddMessage(string.format("DAMAGE: %d", amount))
+				ChatFrame4:AddMessage(string.format("DAMAGE: %d", amount))
                 local ts = roundToInteger(GetTime())
                 if not damageHistory[ts] then
                     damageHistory[ts] = amount
