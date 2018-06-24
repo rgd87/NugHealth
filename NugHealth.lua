@@ -32,6 +32,7 @@ local defaults = {
         height = 80,
         width = 20,
         absorb_width = 5,
+        stagger_width = 7,
         point = "CENTER",
         relative_point = "CENTER",
         frame = "UIParent",
@@ -394,6 +395,7 @@ function NugHealth.Create(self)
 	local height = NugHealthDB.height
     local width = NugHealthDB.width
     local absorb_width = NugHealthDB.absorb_width
+    local stagger_width = NugHealthDB.stagger_width
     local incoming_width = 2
 
     self:SetWidth(width)
@@ -576,9 +578,15 @@ function NugHealth.Create(self)
     local absorb2 = CreateFrame("StatusBar", nil, self)
     absorb2:SetPoint("BOTTOMLEFT",self,"BOTTOMLEFT",0,0)
     absorb2:SetPoint("TOPRIGHT",self,"TOPRIGHT",0,0)
-    absorb2:SetStatusBarTexture("Interface\\AddOns\\NugHealth\\shieldtex")
+
+    local st = absorb2:CreateTexture(nil, 'ARTWORK', nil, -7)
+    -- st:SetBlendMode('BLEND')
+    st:SetTexture("Interface\\AddOns\\NugHealth\\shieldtex")
+    st:SetHorizTile(true)
+    st:SetVertTile(true)
+
+    absorb2:SetStatusBarTexture(st)
     absorb2:GetStatusBarTexture():SetDrawLayer("ARTWORK",-7)
-    absorb2:GetStatusBarTexture():SetVertTile(true)
     absorb2:SetMinMaxValues(0,1)
     absorb2:SetAlpha(0.65)
     absorb2:SetOrientation("VERTICAL")
@@ -631,7 +639,7 @@ function NugHealth.Create(self)
 
 
     local powerbar = CreateFrame("StatusBar", nil, self)
-    powerbar:SetWidth(7)
+    powerbar:SetWidth(stagger_width)
     -- powerbar:SetPoint("TOPLEFT",self,"TOPRIGHT",1,0)
     powerbar:SetPoint("BOTTOMLEFT",self,"BOTTOMRIGHT",2,0)
 	powerbar:SetHeight(height)
@@ -679,10 +687,12 @@ function NugHealth.Create(self)
         local height = NugHealthDB.height
         local width = NugHealthDB.width
         local absorb_width = NugHealthDB.absorb_width
+        local stagger_width = NugHealthDB.stagger_width
 
         self:SetWidth(width)
         self:SetHeight(height)
         self.power:SetHeight(height)
+        self.power:SetWidth(stagger_width)
         self.power.baseheight = height
         self.absorb.maxheight = height
         self.absorb:SetWidth(absorb_width)
@@ -872,7 +882,7 @@ do
             end
 
             if amount then
-				ChatFrame4:AddMessage(string.format("DAMAGE: %d", amount))
+				-- ChatFrame4:AddMessage(string.format("DAMAGE: %d", amount))
                 local ts = roundToInteger(GetTime())
                 if not damageHistory[ts] then
                     damageHistory[ts] = amount
@@ -1048,14 +1058,27 @@ function NugHealth:CreateGUI()
                         step = 1,
                         order = 10,
                     },
+                    stagger_width = {
+                        name = "Stagger Width",
+                        type = "range",
+                        get = function(info) return NugHealthDB.stagger_width end,
+                        set = function(info, v)
+                            NugHealthDB.stagger_width = tonumber(v)
+                            NugHealth:Resize()
+                        end,
+                        min = 2,
+                        max = 12,
+                        step = 1,
+                        order = 11,
+                    },
                     allSpecs = {
                         name = "Show for all specializations",
                         type = "toggle",
-                        width = "double",
+                        width = "full",
                         desc = "not just tanks",
                         get = function(info) return NugHealthDB.allSpecs end,
                         set = function(info, v) NugHealth.Commands.allspecs() end,
-                        order = 11,
+                        order = 12,
                     },
                 },
             }, --
