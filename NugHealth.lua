@@ -45,7 +45,7 @@ local defaults = {
         resolveLimit = 180,
         staggerLimit = 100,
         useCLH = true,
-		lowhpcolor = true,
+		lowhpcolor = false,
     -- }
 }
 
@@ -187,32 +187,60 @@ end
 --     self.resolve:SetStatusBarColor(PercentColor(stagger*3))
 -- end
 
+local staggerHistory = {}
+local staggerAverageTimeFrame = 10
+
+local function GetAverageStagger()
+    local timeLimit = GetTime() - staggerAverageTimeFrame
+    local acc = 0
+    local numEntries = 0
+    for ts, amount in pairs(staggerHistory) do
+        if ts < timeLimit then
+            staggerHistory[ts] = nil
+        else
+            numEntries = numEntries + 1
+            acc = acc + amount
+        end
+    end
+    if numEntries == 0 or acc == 0 then return nil end
+    return acc/numEntries
+end
+
+local doNormalize = true
+
+local lastStagger = 0
 function NugHealth.StaggerOnUpdate(self, time)
     if NugHealth.ResolveOnUpdate(self, time) then return end
 
 
-    -- local stagger = (UnitStagger("player")/UnitHealthMax("player")) * staggerMul
-    -- local currentStagger = 0
-    -- for i=1,100 do
-    --     local name, _,_, count, _, duration, expirationTime, caster, _,_, spellID, _, _, _, st1, staggerValue = UnitDebuff("player", i)
-    --     if spellID == 124273 or spellID == 124274 or spellID == 124275 then
-    --         currentStagger = staggerValue --*duration
-    --     end
-    -- end
     local currentStagger = UnitStagger("player")
+    --stagger updates like 2 times a second on average, 
+    if currentStagger ~= lastStagger then
 
-    local stagger = (currentStagger/UnitHealthMax("player")) * staggerMul
-    -- local name, _,_, count, _, duration, expirationTime, caster, _,_,
-               -- spellID, _, _, _, attackPowerIncrease, val2 = UnitBuff("player", )
-    self.power:SetValue(stagger)
-    if stagger == 0 then
-        self.power:Hide()
-    else
-        -- print(stagger, self.power:GetMinMaxValues(), self.power:GetValue())
-        self.power:Show()
+        staggerHistory[GetTime()] = currentStagger    
+        local averageStagger = GetAverageStagger() or 1 -- avoiding zero division
+
+        local simpleStagger = (currentStagger/UnitHealthMax("player"))
+        if doNormalize then
+            -- print(averageStagger)
+            stagger = (currentStagger/averageStagger) / 2
+        else
+            stagger = simpleStagger * staggerMul
+        end
+
+        self.power:SetValue(stagger)
+        if stagger == 0 then
+            self.power:Hide()
+        else
+            -- print(stagger, self.power:GetMinMaxValues(), self.power:GetValue())
+            self.power:Show()
+        end
+        self.power:SetColor(PercentColor(simpleStagger))
+        self.power:Extend(stagger)
+
+
+        lastStagger = currentStagger
     end
-    self.power:SetColor(PercentColor(stagger))
-	self.power:Extend(stagger)
 end
 
 local function MakeSetColor(mul)
@@ -398,11 +426,18 @@ function NugHealth.Create(self)
     local stagger_width = NugHealthDB.stagger_width
     local incoming_width = 2
 
+    local res = GetCVar("gxWindowedResolution") --select(GetCurrentResolution(), GetScreenResolutions())
+    local p = 1
+    if res then
+        local w,h = string.match(res, "(%d+)x(%d+)")
+        p = (768/h) / UIParent:GetScale()
+    end
+
     self:SetWidth(width)
     self:SetHeight(height)
     local backdrop = {
         bgFile = "Interface\\Addons\\NugHealth\\white", tile = true, tileSize = 0,
-        insets = {left = -2, right = -2, top = -2, bottom = -2},
+        insets = {left = -2*p, right = -2*p, top = -2*p, bottom = -2*p},
     }
     self:SetBackdrop(backdrop)
     self:SetBackdropColor(0, 0, 0, 1)
@@ -499,37 +534,37 @@ function NugHealth.Create(self)
     self.glowanim = sa1
 
 
-    local stagger = CreateFrame("Frame", nil, self)
-    stagger:SetParent(self)
-    stagger:SetPoint("BOTTOMRIGHT",self,"BOTTOMRIGHT",0,0)
-    stagger:SetWidth(6)
+    local resolve = CreateFrame("Frame", nil, self)
+    resolve:SetParent(self)
+    resolve:SetPoint("BOTTOMRIGHT",self,"BOTTOMRIGHT",0,0)
+    resolve:SetWidth(6)
 
-    local at = stagger:CreateTexture(nil, "ARTWORK", nil, -4)
+    local at = resolve:CreateTexture(nil, "ARTWORK", nil, -4)
     at:SetTexture[[Interface\AddOns\NugHealth\white]]
     -- at:SetVertexColor(.7, .7, 1, 1)
-    stagger.texture = at
-    at:SetAllPoints(stagger)
+    resolve.texture = at
+    at:SetAllPoints(resolve)
 
-    local atbg = stagger:CreateTexture(nil, "ARTWORK", nil, -5)
+    local atbg = resolve:CreateTexture(nil, "ARTWORK", nil, -5)
     atbg:SetTexture[[Interface\AddOns\NugHealth\white]]
     atbg:SetVertexColor(0,0,0,1)
     atbg:SetPoint("TOPLEFT", at, "TOPLEFT", -1,1)
     atbg:SetPoint("BOTTOMRIGHT", at, "BOTTOMRIGHT", 1,-1)
 
-    stagger.maxheight = self:GetHeight()
-    stagger.SetValue = function(self, p)
+    resolve.maxheight = self:GetHeight()
+    resolve.SetValue = function(self, p)
         if p > 1 then p = 1 end
         if p < 0 then p = 0 end
         if p == 0 then self:Hide() else self:Show() end
         self:SetHeight(p*self.maxheight)
     end
-    stagger:SetValue(0)
+    resolve:SetValue(0)
 
-    stagger.SetStatusBarColor = function(self, r,g,b)
+    resolve.SetStatusBarColor = function(self, r,g,b)
         self.texture:SetVertexColor(r,g,b)
     end
 
-    self.resolve = stagger
+    self.resolve = resolve
 
 
 
