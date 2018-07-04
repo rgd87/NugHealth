@@ -13,7 +13,10 @@ local UnitHealthOriginal = UnitHealth
 local UnitHealthMax = UnitHealthMax
 local UnitGetTotalAbsorbs = UnitGetTotalAbsorbs
 local UnitGetIncomingHeals = UnitGetIncomingHeals
+local math_min = math.min
+local math_max = math.max
 local lowhpcolor = false
+local showSpikes = true
 
 
 local vengeanceMinRange = 7000
@@ -42,6 +45,7 @@ local defaults = {
         x = 0,
         y = 0,
         showResolve = true,
+        showSpikes = true,
         resolveLimit = 180,
         staggerLimit = 100,
         useCLH = true,
@@ -98,7 +102,8 @@ function NugHealth.ADDON_LOADED(self,event,arg1)
         resolveMaxPercent = NugHealthDB.resolveLimit
         staggerMul = 100/NugHealthDB.staggerLimit
 
-		lowhpcolor = NugHealthDB.lowhpcolor
+        lowhpcolor = NugHealthDB.lowhpcolor
+        showSpikes = NugHealthDB.showSpikes
 
         NugHealth:SPELLS_CHANGED()
 
@@ -187,11 +192,10 @@ end
 --     self.resolve:SetStatusBarColor(PercentColor(stagger*3))
 -- end
 
-local staggerHistory = {}
 local staggerAverageTimeFrame = 10
-
-local function GetAverageStagger()
-    local timeLimit = GetTime() - staggerAverageTimeFrame
+local staggerHistory = {}
+local function GetAverageStagger(timeframe)
+    local timeLimit = GetTime() - (timeframe or 10)
     local acc = 0
     local numEntries = 0
     for ts, amount in pairs(staggerHistory) do
@@ -202,11 +206,9 @@ local function GetAverageStagger()
             acc = acc + amount
         end
     end
-    if numEntries == 0 or acc == 0 then return nil end
+    if numEntries == 0 or acc == 0 then return 0 end
     return acc/numEntries
 end
-
-local doNormalize = true
 
 local lastStagger = 0
 function NugHealth.StaggerOnUpdate(self, time)
@@ -217,15 +219,31 @@ function NugHealth.StaggerOnUpdate(self, time)
     --stagger updates like 2 times a second on average, 
     if currentStagger ~= lastStagger then
 
-        staggerHistory[GetTime()] = currentStagger    
-        local averageStagger = GetAverageStagger() or 1 -- avoiding zero division
+        local uhm = UnitHealthMax("player")
+        local simpleStagger = (currentStagger/uhm)
+        local stagger = simpleStagger * staggerMul
 
-        local simpleStagger = (currentStagger/UnitHealthMax("player"))
-        if doNormalize then
-            -- print(averageStagger)
-            stagger = (currentStagger/averageStagger) / 2
-        else
-            stagger = simpleStagger * staggerMul
+
+        if showSpikes then
+            staggerHistory[GetTime()] = currentStagger    
+            local averageStagger = GetAverageStagger(staggerAverageTimeFrame)
+
+            local mod = 0
+            local asp = 0
+            if averageStagger ~= 0 then
+                -- just showing difference between current stagger and average stagger
+                -- mod = -(currentStagger - averageStagger)/uhm
+
+                -- unmodified deviations
+                -- mod = (1-(currentStagger/averageStagger)) * 0.5
+
+                -- size of deviations multiplied by current stagger 
+                mod = (1-(currentStagger/averageStagger)) * stagger
+                -- mod = (1-(currentStagger/averageStagger)) * simpleStagger
+                asp = averageStagger/uhm * staggerMul
+            end
+
+            self.trend:SetMod(mod, asp)
         end
 
         self.power:SetValue(stagger)
@@ -235,7 +253,7 @@ function NugHealth.StaggerOnUpdate(self, time)
             -- print(stagger, self.power:GetMinMaxValues(), self.power:GetValue())
             self.power:Show()
         end
-        self.power:SetColor(PercentColor(simpleStagger))
+        self.power:SetColor(PercentColor(stagger))
         self.power:Extend(stagger)
 
 
@@ -458,7 +476,7 @@ function NugHealth.Create(self)
 
     local hplost = CreateFrame("StatusBar", nil, self)
     hplost:SetAllPoints(self)
-    hplost:SetStatusBarTexture([[Interface\AddOns\NugHealth\white]])
+    hplost:SetStatusBarTexture("Interface\\BUTTONS\\WHITE8X8")
     hplost:GetStatusBarTexture():SetDrawLayer("ARTWORK",-7)
     hplost:SetMinMaxValues(0,1)
     hplost:SetOrientation("VERTICAL")
@@ -540,13 +558,13 @@ function NugHealth.Create(self)
     resolve:SetWidth(6)
 
     local at = resolve:CreateTexture(nil, "ARTWORK", nil, -4)
-    at:SetTexture[[Interface\AddOns\NugHealth\white]]
+    at:SetTexture"Interface\\BUTTONS\\WHITE8X8"
     -- at:SetVertexColor(.7, .7, 1, 1)
     resolve.texture = at
     at:SetAllPoints(resolve)
 
     local atbg = resolve:CreateTexture(nil, "ARTWORK", nil, -5)
-    atbg:SetTexture[[Interface\AddOns\NugHealth\white]]
+    atbg:SetTexture"Interface\\BUTTONS\\WHITE8X8"
     atbg:SetVertexColor(0,0,0,1)
     atbg:SetPoint("TOPLEFT", at, "TOPLEFT", -1,1)
     atbg:SetPoint("BOTTOMRIGHT", at, "BOTTOMRIGHT", 1,-1)
@@ -574,13 +592,13 @@ function NugHealth.Create(self)
     absorb:SetWidth(absorb_width)
 
     local at = absorb:CreateTexture(nil, "ARTWORK", nil, -4)
-    at:SetTexture[[Interface\AddOns\NugHealth\white]]
+    at:SetTexture"Interface\\BUTTONS\\WHITE8X8"
     at:SetVertexColor(.7, .7, 1, 1)
     absorb.texture = at
     at:SetAllPoints(absorb)
 
     local atbg = absorb:CreateTexture(nil, "ARTWORK", nil, -5)
-    atbg:SetTexture[[Interface\AddOns\NugHealth\white]]
+    atbg:SetTexture"Interface\\BUTTONS\\WHITE8X8"
     atbg:SetVertexColor(0,0,0,1)
     atbg:SetPoint("TOPLEFT", at, "TOPLEFT", -1,1)
     atbg:SetPoint("BOTTOMRIGHT", at, "BOTTOMRIGHT", 1,-1)
@@ -635,13 +653,13 @@ function NugHealth.Create(self)
     -- incoming:SetWidth(incoming_width)
 
     -- local iht = incoming:CreateTexture(nil, "ARTWORK", nil, -4)
-    -- iht:SetTexture[[Interface\AddOns\NugHealth\white]]
+    -- iht:SetTexture"Interface\\BUTTONS\\WHITE8X8"
     -- iht:SetVertexColor(0.6, 1, 0.6, 1)
     -- incoming.texture = iht
     -- iht:SetAllPoints(incoming)
 
     -- local ihtbg = incoming:CreateTexture(nil, "ARTWORK", nil, -5)
-    -- ihtbg:SetTexture[[Interface\AddOns\NugHealth\white]]
+    -- ihtbg:SetTexture"Interface\\BUTTONS\\WHITE8X8"
     -- ihtbg:SetVertexColor(0,0,0,1)
     -- ihtbg:SetPoint("TOPLEFT", iht, "TOPLEFT", -1,1)
     -- ihtbg:SetPoint("BOTTOMRIGHT", iht, "BOTTOMRIGHT", 1,-1)
@@ -688,21 +706,21 @@ function NugHealth.Create(self)
 		end
 	end
 
-    powerbar:SetStatusBarTexture("Interface\\Addons\\NugHealth\\white")
+    powerbar:SetStatusBarTexture("Interface\\BUTTONS\\WHITE8X8")
     powerbar:GetStatusBarTexture():SetDrawLayer("ARTWORK",-2)
     powerbar:SetOrientation("VERTICAL")
     powerbar:SetMinMaxValues(0, 1)
     powerbar:SetValue(0)
     local backdrop = {
-        bgFile = "Interface\\Addons\\NugHealth\\white", tile = true, tileSize = 0,
-        insets = {left = -2, right = -2, top = -2, bottom = -2},
+        bgFile = "Interface\\BUTTONS\\WHITE8X8", tile = true, tileSize = 0,
+        insets = {left = -2*p, right = -2*p, top = -2*p, bottom = -2*p},
     }
     powerbar:SetBackdrop(backdrop)
     powerbar:SetBackdropColor(0, 0, 0, 1)
 
     local pbbg = powerbar:CreateTexture(nil,"ARTWORK",nil,-3)
     pbbg:SetAllPoints(powerbar)
-    pbbg:SetTexture("Interface\\Addons\\NugHealth\\white")
+    pbbg:SetTexture("Interface\\BUTTONS\\WHITE8X8")
     powerbar.bg = pbbg
 
     powerbar.SetColor = function(self, r,g,b)
@@ -717,6 +735,49 @@ function NugHealth.Create(self)
     powerbar:Hide()
 
     self.power = powerbar
+
+    local trend_width = 4
+
+    local trend = CreateFrame("Frame", nil, powerbar)
+    trend:SetFrameLevel(3)
+    trend:SetWidth(trend_width)
+    trend:SetHeight(height*0.25)
+    
+    local ttex = trend:CreateTexture(nil, "ARTWORK", nil, 0)
+    ttex:SetTexture("Interface\\BUTTONS\\WHITE8X8")
+    ttex:SetAllPoints()
+    trend.texture = ttex
+
+    trend:SetBackdrop(backdrop)
+    trend:SetBackdropColor(0, 0, 0, 1)
+    trend:Hide()
+
+    trend.SetMod = function(self, mod, averageStagger)
+        if mod > 0 then
+            self:ClearAllPoints()
+            local mod2 = math_min(0.75, mod)
+            local ah = math_min(averageStagger, 0.75)*height
+            self:SetPoint("TOPLEFT", powerbar, "BOTTOMRIGHT", 0, ah) 
+            self:SetHeight(mod2*height)
+            self.texture:SetVertexColor(0,1,0)
+            self:Show()
+        elseif mod < 0 then
+            self:ClearAllPoints()
+            local mod2 = math.max(-0.75, mod)
+            local ah = math_min(averageStagger, 0.75)*height
+            -- spike bar won't be starting higher than 75% stagger position.
+            -- it's maximum length is also 75% of frame height
+            -- and the actual stagger bar itself also extends from 100% to 150% stagger if needed
+            self:SetPoint("BOTTOMLEFT", powerbar, "BOTTOMRIGHT", 0, ah) 
+            self:SetHeight(-mod2*height)
+            self.texture:SetVertexColor(1,0,0)
+            self:Show()            
+        else
+            self:Hide()
+        end
+    end
+
+    self.trend = trend
 
     self.Resize = function(self)
         local height = NugHealthDB.height
@@ -801,6 +862,13 @@ NugHealth.Commands = {
     ["classcolor"] = function(v)
         NugHealthDB.classcolor = not NugHealthDB.classcolor
         NugHealth.health:RestoreColor()
+    end,
+    ["spikebar"] = function(v)
+        NugHealthDB.showSpikes = not NugHealthDB.showSpikes
+        showSpikes = NugHealthDB.showSpikes
+        if not showSpikes then
+            NugHealth.trend:Hide()
+        end
     end,
 	["lowhpcolor"] = function(v)
         NugHealthDB.lowhpcolor = not NugHealthDB.lowhpcolor
