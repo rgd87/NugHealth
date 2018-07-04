@@ -47,7 +47,7 @@ local defaults = {
         y = 0,
         showResolve = true,
         showStaggerSpikes = true,
-        showResolveSpikes = true,
+        showResolveSpikes = false,
         resolveLimit = 180,
         staggerLimit = 100,
         useCLH = true,
@@ -184,7 +184,7 @@ end
 
 
 
-local lastStagger = 0
+local lastStagger
 function NugHealth.StaggerOnUpdate(self, time)
     -- if NugHealth.ResolveOnUpdate(self, time) then return end
     local currentStagger = UnitStagger("player")
@@ -1128,7 +1128,7 @@ function NugHealth:CreateGUI()
                         order = 3,
                     },
                     resolve = {
-                        name = "Resolve",
+                        name = "Resolve (Damage taken in the last 5 sec)",
                         type = "toggle",
                         width = "full",
                         desc = "Show recent damage taken bar",
