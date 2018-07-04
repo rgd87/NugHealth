@@ -13,10 +13,12 @@ local UnitHealthOriginal = UnitHealth
 local UnitHealthMax = UnitHealthMax
 local UnitGetTotalAbsorbs = UnitGetTotalAbsorbs
 local UnitGetIncomingHeals = UnitGetIncomingHeals
+local GetTime = GetTime
 local math_min = math.min
 local math_max = math.max
 local lowhpcolor = false
 local showSpikes = true
+local isMonk = select(2, UnitClass"player") == "MONK"
 
 
 local vengeanceMinRange = 7000
@@ -26,8 +28,7 @@ local vengeanceRedRange = 60000
 
 local stagerSide = "LEFT"
 local staggerMul = 1
-local resolveMaxPercent = 30
--- local staggerScaleFactor
+local resolveMul = 1
 local playerGUID = 0
 
 local defaults = {
@@ -45,7 +46,8 @@ local defaults = {
         x = 0,
         y = 0,
         showResolve = true,
-        showSpikes = true,
+        showStaggerSpikes = true,
+        showResolveSpikes = true,
         resolveLimit = 180,
         staggerLimit = 100,
         useCLH = true,
@@ -99,11 +101,14 @@ function NugHealth.ADDON_LOADED(self,event,arg1)
 
         self:Create()
 
-        resolveMaxPercent = NugHealthDB.resolveLimit
+        resolveMul = 100/NugHealthDB.resolveLimit
         staggerMul = 100/NugHealthDB.staggerLimit
 
         lowhpcolor = NugHealthDB.lowhpcolor
-        showSpikes = NugHealthDB.showSpikes
+        showSpikes = NugHealthDB.showResolveSpikes
+        if isMonk then
+            showSpikes = NugHealthDB.showStaggerSpikes
+        end
 
         NugHealth:SPELLS_CHANGED()
 
@@ -172,25 +177,31 @@ function NugHealth.ResolveOnUpdate(self, time)
     if self._elapsed < self.timeout then return true end
     self._elapsed = 0
 
-    local v = NugHealth:GatherResolveDamage(5)/UnitHealthMax("player") --damage during past 5seconds relative to max health
-	-- ChatFrame4:AddMessage(string.format("CURRENT: %f %d", v, NugHealth:GatherResolveDamage(5)))
-    local vp = v*100/resolveMaxPercent
-
-    self.resolve:SetValue(vp)
-    self.resolve:SetStatusBarColor(PercentColor(vp*1.5))
+    return self:PLAYER_RESOLVE_UPDATE()
 end
 
--- function NugHealth.StaggerOnUpdate(self, time)
---     self._elapsed = (self._elapsed or 0) + time
---     if self._elapsed < 0.1 then return end
---     self._elapsed = 0
 
---     local stagger = UnitStagger("player")/UnitHealthMax("player")
---     -- local name, _,_, count, _, duration, expirationTime, caster, _,_,
---                -- spellID, _, _, _, attackPowerIncrease, val2 = UnitBuff("player", )
---     self.resolve:SetValue(stagger)
---     self.resolve:SetStatusBarColor(PercentColor(stagger*3))
--- end
+
+
+
+local lastStagger = 0
+function NugHealth.StaggerOnUpdate(self, time)
+    -- if NugHealth.ResolveOnUpdate(self, time) then return end
+    local currentStagger = UnitStagger("player")
+    --stagger updates like 2 times a second on average, 
+    if currentStagger ~= lastStagger then
+        lastStagger = currentStagger
+
+        return self:PLAYER_STAGGER_UPDATE(currentStagger)
+    end
+end
+
+local function MakeSetColor(mul)
+    return function(self, r,g,b)
+        self:SetStatusBarColor(r,g,b)
+        self.bg:SetVertexColor(r*mul,g*mul,b*mul)
+    end
+end
 
 local staggerAverageTimeFrame = 10
 local staggerHistory = {}
@@ -210,62 +221,85 @@ local function GetAverageStagger(timeframe)
     return acc/numEntries
 end
 
-local lastStagger = 0
-function NugHealth.StaggerOnUpdate(self, time)
-    if NugHealth.ResolveOnUpdate(self, time) then return end
+function NugHealth:PLAYER_RESOLVE_UPDATE()
+    local uhm = UnitHealthMax("player")
+    local currentResolve = NugHealth:GatherResolveDamage(5)
+    local simpleDP5 = currentResolve/uhm --damage during past 5seconds relative to max health
 
+    -- resolveMul is 100 / resolveLimit setting
+    local resolve = simpleDP5 * resolveMul
+    
+    if showSpikes then
+        staggerHistory[GetTime()] = currentResolve
+        local averageResolve = GetAverageStagger(staggerAverageTimeFrame)
 
-    local currentStagger = UnitStagger("player")
-    --stagger updates like 2 times a second on average, 
-    if currentStagger ~= lastStagger then
+        local mod = 0
+        local asp = 0
+        if averageResolve ~= 0 then
+            -- just showing difference between current stagger and average stagger
+            mod = -(currentResolve - averageResolve)/uhm * resolveMul
 
-        local uhm = UnitHealthMax("player")
-        local simpleStagger = (currentStagger/uhm)
-        local stagger = simpleStagger * staggerMul
-
-
-        if showSpikes then
-            staggerHistory[GetTime()] = currentStagger    
-            local averageStagger = GetAverageStagger(staggerAverageTimeFrame)
-
-            local mod = 0
-            local asp = 0
-            if averageStagger ~= 0 then
-                -- just showing difference between current stagger and average stagger
-                -- mod = -(currentStagger - averageStagger)/uhm
-
-                -- unmodified deviations
-                -- mod = (1-(currentStagger/averageStagger)) * 0.5
-
-                -- size of deviations multiplied by current stagger 
-                mod = (1-(currentStagger/averageStagger)) * stagger
-                -- mod = (1-(currentStagger/averageStagger)) * simpleStagger
-                asp = averageStagger/uhm * staggerMul
-            end
-
-            self.trend:SetMod(mod, asp)
+            -- size of deviations multiplied by current Resolve 
+            -- mod = (1-(currentResolve/averageResolve)) * resolve
+            -- mod = (1-(currentResolve/averageResolve)) * simpleResolve
+            asp = averageResolve/uhm * resolveMul
         end
 
-        self.power:SetValue(stagger)
-        if stagger == 0 then
-            self.power:Hide()
-        else
-            -- print(stagger, self.power:GetMinMaxValues(), self.power:GetValue())
-            self.power:Show()
-        end
-        self.power:SetColor(PercentColor(stagger))
-        self.power:Extend(stagger)
-
-
-        lastStagger = currentStagger
+        self.trend:SetMod(mod, asp)
     end
+
+    
+    self.power:SetValue(resolve)
+    if resolve == 0 then
+        self.power:Hide()
+    else
+        self.power:Show()
+    end
+    self.power:SetStatusBarColor(PercentColor(resolve*1.5))
+    self.power:Extend(resolve)
+
+    -- local vp = v*100/resolveMaxPercent
+    -- self.resolve:SetValue(vp)
+    -- self.resolve:SetStatusBarColor(PercentColor(vp*1.5))
 end
 
-local function MakeSetColor(mul)
-    return function(self, r,g,b)
-        self:SetStatusBarColor(r,g,b)
-        self.bg:SetVertexColor(r*mul,g*mul,b*mul)
+function NugHealth:PLAYER_STAGGER_UPDATE(currentStagger)
+    local uhm = UnitHealthMax("player")
+    local simpleStagger = (currentStagger/uhm)
+    local stagger = simpleStagger * staggerMul
+
+
+    if showSpikes then
+        staggerHistory[GetTime()] = currentStagger    
+        local averageStagger = GetAverageStagger(staggerAverageTimeFrame)
+
+        local mod = 0
+        local asp = 0
+        if averageStagger ~= 0 then
+            -- just showing difference between current stagger and average stagger
+            -- mod = -(currentStagger - averageStagger)/uhm
+
+            -- unmodified deviations
+            -- mod = (1-(currentStagger/averageStagger)) * 0.5
+
+            -- size of deviations multiplied by current stagger 
+            mod = (1-(currentStagger/averageStagger)) * stagger
+            -- mod = (1-(currentStagger/averageStagger)) * simpleStagger
+            asp = averageStagger/uhm * staggerMul
+        end
+
+        self.trend:SetMod(mod, asp)
     end
+
+    self.power:SetValue(stagger)
+    if stagger == 0 then
+        self.power:Hide()
+    else
+        -- print(stagger, self.power:GetMinMaxValues(), self.power:GetValue())
+        self.power:Show()
+    end
+    self.power:SetColor(PercentColor(stagger))
+    self.power:Extend(stagger)
 end
 
 
@@ -305,16 +339,11 @@ function NugHealth:Enable()
     self:RegisterUnitEvent("UNIT_ABSORB_AMOUNT_CHANGED", "player")
     -- self:RegisterUnitEvent("UNIT_HEAL_PREDICTION", "player")
 
-    if NugHealthDB.showResolve then
-        self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-        self.timeout = 0.3
-        self:SetScript("OnUpdate", NugHealth.ResolveOnUpdate)
-    end
-
-    if select(2, UnitClass"player") == "MONK" then
+    
+    if isMonk then
         self.timeout = 0.05
         self:SetScript("OnUpdate", NugHealth.StaggerOnUpdate)
-        self.power:SetScript("OnUpdate",nil)
+        -- self.power:SetScript("OnUpdate",nil)
         self.power:SetMinMaxValues(0,1)
         self.power:SetValue(0)
         self.power.SetColor = MakeSetColor(0.1)
@@ -325,6 +354,14 @@ function NugHealth:Enable()
         -- self.power.auraname = GetSpellInfo(215479)
         -- self.power:SetColor(80/255, 83/255, 150/255)
         -- self:RegisterUnitEvent("UNIT_AURA", "player");
+    elseif NugHealthDB.showResolve then
+        self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+        self.power:SetMinMaxValues(0,1)
+        self.power:SetValue(0)
+        self.power.SetColor = MakeSetColor(0.1)
+        self.power:SetColor(38/255, 221/255, 163/255)
+        self.timeout = 0.3
+        self:SetScript("OnUpdate", NugHealth.ResolveOnUpdate)
     end
 
     -- if select(2, UnitClass"player") == "WARRIOR" then
@@ -728,9 +765,9 @@ function NugHealth.Create(self)
         self.bg:SetVertexColor(r*.3,g*.3,b*.3)
     end
 
-    powerbar:SetScript("OnUpdate", function(self, time)
-        self:SetValue( self.endTime - GetTime())
-    end)
+    -- powerbar:SetScript("OnUpdate", function(self, time)
+        -- self:SetValue( self.endTime - GetTime())
+    -- end)
 
     powerbar:Hide()
 
@@ -846,7 +883,7 @@ NugHealth.Commands = {
             print('correct range is 5-500')
         end
         NugHealthDB.resolveLimit = num
-        resolveMaxPercent = NugHealthDB.resolveLimit
+        resolveMul = 100/NugHealthDB.resolveLimit
         if not silent then print("New resolve limit =", num) end
     end,
     ["staggerlimit"] = function(v, silent)
@@ -863,9 +900,22 @@ NugHealth.Commands = {
         NugHealthDB.classcolor = not NugHealthDB.classcolor
         NugHealth.health:RestoreColor()
     end,
-    ["spikebar"] = function(v)
-        NugHealthDB.showSpikes = not NugHealthDB.showSpikes
-        showSpikes = NugHealthDB.showSpikes
+    ["staggerspikes"] = function(v)
+        NugHealthDB.showStaggerSpikes = not NugHealthDB.showStaggerSpikes
+        showSpikes = NugHealthDB.showResolveSpikes
+        if isMonk then
+            showSpikes = NugHealthDB.showStaggerSpikes
+        end
+        if not showSpikes then
+            NugHealth.trend:Hide()
+        end
+    end,
+    ["resolvespikes"] = function(v)
+        NugHealthDB.showResolveSpikes = not NugHealthDB.showResolveSpikes
+        showSpikes = NugHealthDB.showResolveSpikes
+        if isMonk then
+            showSpikes = NugHealthDB.showStaggerSpikes
+        end
         if not showSpikes then
             NugHealth.trend:Hide()
         end
@@ -1080,10 +1130,19 @@ function NugHealth:CreateGUI()
                     resolve = {
                         name = "Resolve",
                         type = "toggle",
+                        width = "full",
                         desc = "Show recent damage taken bar",
                         get = function(info) return NugHealthDB.showResolve end,
                         set = function(info, v) NugHealth.Commands.resolve(nil, true) end,
                         order = 4,
+                    },
+                    resolveSpikes = {
+                        name = "Show Resolve Spikes",
+                        type = "toggle",
+                        desc = "Shows difference between current resolve and the average for the last 10s",
+                        get = function(info) return NugHealthDB.showResolveSpikes end,
+                        set = function(info, v) NugHealth.Commands.resolvespikes() end,
+                        order = 4.1,
                     },
 					resolveLimit = {
                         name = "Resolve Limit",
@@ -1099,13 +1158,13 @@ function NugHealth:CreateGUI()
                         step = 10,
                         order = 5,
                     },
-					clh = {
-                        name = "Use LibCombatLogHealth",
+					staggerSpikes = {
+                        name = "Show Stagger Spikes",
                         type = "toggle",
-                        desc = "Fast health updates for nerds",
-                        get = function(info) return NugHealthDB.useCLH end,
-                        set = function(info, v) NugHealth.Commands.useclh() end,
-                        order = 6,
+                        -- desc = "Shows difference between current resolve and the average for the last 10s",
+                        get = function(info) return NugHealthDB.showStaggerSpikes end,
+                        set = function(info, v) NugHealth.Commands.staggerspikes() end,
+                        order = 6.1,
                     },
 					staggerLimit = {
                         name = "Stagger Limit",
@@ -1121,7 +1180,15 @@ function NugHealth:CreateGUI()
                         step = 10,
                         order = 7,
                     },
-
+                    clh = {
+                        name = "Use LibCombatLogHealth",
+                        type = "toggle",
+                        width = "full",
+                        desc = "Fast health updates for nerds",
+                        get = function(info) return NugHealthDB.useCLH end,
+                        set = function(info, v) NugHealth.Commands.useclh() end,
+                        order = 7.5,
+                    },
                     width = {
                         name = "Width",
                         type = "range",
