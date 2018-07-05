@@ -1,4 +1,8 @@
+local addonName, ns = ...
+
 NugHealth = CreateFrame("Frame","NugHealth", UIParent)
+
+local NugHealth = NugHealth
 
 NugHealth:SetScript("OnEvent", function(self, event, ...)
 	return self[event](self, event, ...)
@@ -25,62 +29,33 @@ local vengeanceMinRange = 7000
 local vengeanceMaxRange = 200000
 local vengeanceRedRange = 60000
 
-
-local stagerSide = "LEFT"
 local staggerMul = 1
 local resolveMul = 1
 local playerGUID = 0
 
 local defaults = {
-    -- anchor = {
-        height = 80,
-        width = 20,
-        absorb_width = 5,
-        stagger_width = 7,
-        point = "CENTER",
-        relative_point = "CENTER",
-        frame = "UIParent",
-        classcolor = false,
-        allSpecs = false,
-        healthcolor = { 0.78, 0.61, 0.43 },
-        x = 0,
-        y = 0,
-        showResolve = true,
-        showStaggerSpikes = true,
-        showResolveSpikes = false,
-        resolveLimit = 180,
-        staggerLimit = 100,
-        useCLH = true,
-		lowhpcolor = false,
-    -- }
+    height = 95,
+    width = 35,
+    absorb_width = 6,
+    stagger_width = 10,
+    spike_width = 4,
+    point = "CENTER",
+    relative_point = "CENTER",
+    frame = "UIParent",
+    classcolor = true,
+    allSpecs = false,
+    healthcolor = { 0.78, 0.61, 0.43 },
+    x = 0,
+    y = 0,
+    showResolve = true,
+    showStaggerSpikes = true,
+    showResolveSpikes = false,
+    resolveLimit = 180,
+    staggerLimit = 100,
+    useCLH = true,
+    lowhpcolor = false,
+    lowhpFlash = false
 }
-
-local function SetupDefaults(t, defaults)
-    for k,v in pairs(defaults) do
-        if type(v) == "table" then
-            if t[k] == nil then
-                t[k] = CopyTable(v)
-            else
-                SetupDefaults(t[k], v)
-            end
-        else
-            if t[k] == nil then t[k] = v end
-        end
-    end
-end
-local function RemoveDefaults(t, defaults)
-    for k, v in pairs(defaults) do
-        if type(t[k]) == 'table' and type(v) == 'table' then
-            RemoveDefaults(t[k], v)
-            if next(t[k]) == nil then
-                t[k] = nil
-            end
-        elseif t[k] == v then
-            t[k] = nil
-        end
-    end
-    return t
-end
 
 local function PercentColor(percent)
     if percent <= 0 then
@@ -97,7 +72,7 @@ end
 function NugHealth.ADDON_LOADED(self,event,arg1)
     if arg1 == "NugHealth" then
         NugHealthDB = NugHealthDB or {}
-        SetupDefaults(NugHealthDB, defaults)
+        ns.SetupDefaults(NugHealthDB, defaults)
 
         self:Create()
 
@@ -136,7 +111,7 @@ function NugHealth.ADDON_LOADED(self,event,arg1)
 end
 
 function NugHealth.PLAYER_LOGOUT(self, event)
-    RemoveDefaults(NugHealthDB, defaults)
+    ns.RemoveDefaults(NugHealthDB, defaults)
 end
 
 function NugHealth.PLAYER_LOGIN(self, event)
@@ -196,14 +171,7 @@ function NugHealth.StaggerOnUpdate(self, time)
     end
 end
 
-local function MakeSetColor(mul)
-    return function(self, r,g,b)
-        self:SetStatusBarColor(r,g,b)
-        self.bg:SetVertexColor(r*mul,g*mul,b*mul)
-    end
-end
-
-local staggerAverageTimeFrame = 10
+local staggerAverageTimeFrame = 15
 local staggerHistory = {}
 local function GetAverageStagger(timeframe)
     local timeLimit = GetTime() - (timeframe or 10)
@@ -255,7 +223,7 @@ function NugHealth:PLAYER_RESOLVE_UPDATE()
     else
         self.power:Show()
     end
-    self.power:SetStatusBarColor(PercentColor(resolve*1.5))
+    self.power:SetColor(PercentColor(resolve*1.5))
     self.power:Extend(resolve)
 
     -- local vp = v*100/resolveMaxPercent
@@ -277,13 +245,13 @@ function NugHealth:PLAYER_STAGGER_UPDATE(currentStagger)
         local asp = 0
         if averageStagger ~= 0 then
             -- just showing difference between current stagger and average stagger
-            -- mod = -(currentStagger - averageStagger)/uhm
+            mod = -(currentStagger - averageStagger)/uhm * staggerMul
 
             -- unmodified deviations
             -- mod = (1-(currentStagger/averageStagger)) * 0.5
 
             -- size of deviations multiplied by current stagger 
-            mod = (1-(currentStagger/averageStagger)) * stagger
+            -- mod = (1-(currentStagger/averageStagger)) * stagger
             -- mod = (1-(currentStagger/averageStagger)) * simpleStagger
             asp = averageStagger/uhm * staggerMul
         end
@@ -344,11 +312,11 @@ function NugHealth:Enable()
         self.timeout = 0.05
         self:SetScript("OnUpdate", NugHealth.StaggerOnUpdate)
         -- self.power:SetScript("OnUpdate",nil)
-        self.power:SetMinMaxValues(0,1)
-        self.power:SetValue(0)
-        self.power.SetColor = MakeSetColor(0.1)
+        -- self.power:SetMinMaxValues(0,1)
+        -- self.power:SetValue(0)
+        -- self.power.SetColor = MakeSetColor(0.1)
         -- self.power.auraname = GetSpellInfo(115307)
-        self.power:SetColor(38/255, 221/255, 163/255)
+        -- self.power:SetColor(38/255, 221/255, 163/255)
         self.power:Show()
 
         -- self.power.auraname = GetSpellInfo(215479)
@@ -356,10 +324,10 @@ function NugHealth:Enable()
         -- self:RegisterUnitEvent("UNIT_AURA", "player");
     elseif NugHealthDB.showResolve then
         self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-        self.power:SetMinMaxValues(0,1)
-        self.power:SetValue(0)
-        self.power.SetColor = MakeSetColor(0.1)
-        self.power:SetColor(38/255, 221/255, 163/255)
+        -- self.power:SetMinMaxValues(0,1)
+        -- self.power:SetValue(0)
+        -- self.power.SetColor = MakeSetColor(0.1)
+        -- self.power:SetColor(38/255, 221/255, 163/255)
         self.timeout = 0.3
         self:SetScript("OnUpdate", NugHealth.ResolveOnUpdate)
     end
@@ -435,28 +403,29 @@ function NugHealth.UNIT_HEALTH(self, event)
         self.healthlost.endvalue = vp
     end
 
-        if vp < 0.2 then
-            self.glowanim:SetDuration(0.2)
-            if not self.glow:IsPlaying() then
-				if NugHealthDB.lowhpcolor then self.health:SetColor(1,.1,.1) end
-                self.glowanim.pending_stop = false
-                self.glow:Play()
-            end
-        elseif vp < 0.35 then
-            self.glowanim:SetDuration(0.4)
+    -- if NugHealthDB.lowhpFlash then
+    --     if vp < 0.2 then
+    --         self.glowanim:SetDuration(0.2)
+    --         if not self.glow:IsPlaying() then
+	-- 			if NugHealthDB.lowhpcolor then self.health:SetColor(1,.1,.1) end
+    --             self.glowanim.pending_stop = false
+    --             self.glow:Play()
+    --         end
+    --     elseif vp < 0.35 then
+    --         self.glowanim:SetDuration(0.4)
 
-            if not self.glow:IsPlaying() then
-				if NugHealthDB.lowhpcolor then self.health:SetColor(.9,0,0) end
-                self.glowanim.pending_stop = false
-                self.glow:Play()
-            end
-        else
-            if self.glow:IsPlaying() then
-				self.health:RestoreColor()
-                self.glowanim.pending_stop = true
-            end
-        end
-
+    --         if not self.glow:IsPlaying() then
+	-- 			if NugHealthDB.lowhpcolor then self.health:SetColor(.9,0,0) end
+    --             self.glowanim.pending_stop = false
+    --             self.glow:Play()
+    --         end
+    --     else
+    --         if self.glow:IsPlaying() then
+	-- 			self.health:RestoreColor()
+    --             self.glowanim.pending_stop = true
+    --         end
+    --     end
+    -- end
 end
 
 -- function NugHealth.UNIT_MAXHEALTH(self, event)
@@ -479,6 +448,7 @@ function NugHealth.Create(self)
     local width = NugHealthDB.width
     local absorb_width = NugHealthDB.absorb_width
     local stagger_width = NugHealthDB.stagger_width
+    local trend_width = NugHealthDB.spike_width
     local incoming_width = 2
 
     local res = GetCVar("gxWindowedResolution") --select(GetCurrentResolution(), GetScreenResolutions())
@@ -760,10 +730,7 @@ function NugHealth.Create(self)
     pbbg:SetTexture("Interface\\BUTTONS\\WHITE8X8")
     powerbar.bg = pbbg
 
-    powerbar.SetColor = function(self, r,g,b)
-        self:SetStatusBarColor(r,g,b)
-        self.bg:SetVertexColor(r*.3,g*.3,b*.3)
-    end
+    powerbar.SetColor = ns.MakeSetColor(0.1)
 
     -- powerbar:SetScript("OnUpdate", function(self, time)
         -- self:SetValue( self.endTime - GetTime())
@@ -773,7 +740,7 @@ function NugHealth.Create(self)
 
     self.power = powerbar
 
-    local trend_width = 4
+    
 
     local trend = CreateFrame("Frame", nil, powerbar)
     trend:SetFrameLevel(3)
@@ -785,15 +752,20 @@ function NugHealth.Create(self)
     ttex:SetAllPoints()
     trend.texture = ttex
 
-    trend:SetBackdrop(backdrop)
+    trend:SetBackdrop({
+        bgFile = "Interface\\BUTTONS\\WHITE8X8", tile = true, tileSize = 0,
+        insets = {left = -1*p, right = -1*p, top = -1*p, bottom = -1*p},
+    })
     trend:SetBackdropColor(0, 0, 0, 1)
     trend:Hide()
 
     trend.SetMod = function(self, mod, averageStagger)
+        local height = self:GetParent().baseheight
         if mod > 0 then
             self:ClearAllPoints()
             local mod2 = math_min(0.75, mod)
-            local ah = math_min(averageStagger, 0.75)*height
+            -- local ah = math_min(averageStagger, 0.75)*height
+            local ah = averageStagger*height
             self:SetPoint("TOPLEFT", powerbar, "BOTTOMRIGHT", 0, ah) 
             self:SetHeight(mod2*height)
             self.texture:SetVertexColor(0,1,0)
@@ -801,7 +773,8 @@ function NugHealth.Create(self)
         elseif mod < 0 then
             self:ClearAllPoints()
             local mod2 = math.max(-0.75, mod)
-            local ah = math_min(averageStagger, 0.75)*height
+            -- local ah = math_min(averageStagger, 0.75)*height
+            local ah = averageStagger*height
             -- spike bar won't be starting higher than 75% stagger position.
             -- it's maximum length is also 75% of frame height
             -- and the actual stagger bar itself also extends from 100% to 150% stagger if needed
@@ -821,12 +794,14 @@ function NugHealth.Create(self)
         local width = NugHealthDB.width
         local absorb_width = NugHealthDB.absorb_width
         local stagger_width = NugHealthDB.stagger_width
+        local trend_width = NugHealthDB.spike_width
 
         self:SetWidth(width)
         self:SetHeight(height)
         self.power:SetHeight(height)
         self.power:SetWidth(stagger_width)
         self.power.baseheight = height
+        self.trend:SetWidth(trend_width)
         self.absorb.maxheight = height
         self.absorb:SetWidth(absorb_width)
         self.resolve.maxheight = height
@@ -1211,7 +1186,7 @@ function NugHealth:CreateGUI()
                             NugHealth:Resize()
                         end,
                         min = 30,
-                        max = 160,
+                        max = 250,
                         step = 1,
                         order = 9,
                     },
@@ -1237,9 +1212,22 @@ function NugHealth:CreateGUI()
                             NugHealth:Resize()
                         end,
                         min = 2,
-                        max = 12,
+                        max = 20,
                         step = 1,
                         order = 11,
+                    },
+                    spike_width = {
+                        name = "Spike Width",
+                        type = "range",
+                        get = function(info) return NugHealthDB.spike_width end,
+                        set = function(info, v)
+                            NugHealthDB.spike_width = tonumber(v)
+                            NugHealth:Resize()
+                        end,
+                        min = 2,
+                        max = 12,
+                        step = 1,
+                        order = 12,
                     },
                     allSpecs = {
                         name = "Show for all specializations",
@@ -1248,7 +1236,7 @@ function NugHealth:CreateGUI()
                         desc = "not just tanks",
                         get = function(info) return NugHealthDB.allSpecs end,
                         set = function(info, v) NugHealth.Commands.allspecs() end,
-                        order = 12,
+                        order = 13,
                     },
                 },
             }, --
@@ -1262,4 +1250,38 @@ function NugHealth:CreateGUI()
     local panelFrame = AceConfigDialog:AddToBlizOptions("NugHealthOptions", "NugHealth")
 
     return panelFrame
+end
+
+function ns.MakeSetColor(mul)
+    return function(self, r,g,b)
+        self:SetStatusBarColor(r,g,b)
+        self.bg:SetVertexColor(r*mul,g*mul,b*mul)
+    end
+end
+
+function ns.SetupDefaults(t, defaults)
+    for k,v in pairs(defaults) do
+        if type(v) == "table" then
+            if t[k] == nil then
+                t[k] = CopyTable(v)
+            else
+                ns.SetupDefaults(t[k], v)
+            end
+        else
+            if t[k] == nil then t[k] = v end
+        end
+    end
+end
+function ns.RemoveDefaults(t, defaults)
+    for k, v in pairs(defaults) do
+        if type(t[k]) == 'table' and type(v) == 'table' then
+            ns.RemoveDefaults(t[k], v)
+            if next(t[k]) == nil then
+                t[k] = nil
+            end
+        elseif t[k] == v then
+            t[k] = nil
+        end
+    end
+    return t
 end
