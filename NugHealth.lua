@@ -197,38 +197,37 @@ function NugHealth:PLAYER_RESOLVE_UPDATE()
     -- resolveMul is 100 / resolveLimit setting
     local resolve = simpleDP5 * resolveMul
     
-    if showSpikes then
-        staggerHistory[GetTime()] = currentResolve
-        local averageResolve = GetAverageStagger(staggerAverageTimeFrame)
+    -- if showSpikes then
+    --     staggerHistory[GetTime()] = currentResolve
+    --     local averageResolve = GetAverageStagger(staggerAverageTimeFrame)
 
-        local mod = 0
-        local asp = 0
-        if averageResolve ~= 0 then
-            -- just showing difference between current stagger and average stagger
-            mod = -(currentResolve - averageResolve)/uhm * resolveMul
+    --     local mod = 0
+    --     local asp = 0
+    --     if averageResolve ~= 0 then
+    --         -- just showing difference between current stagger and average stagger
+    --         mod = -(currentResolve - averageResolve)/uhm * resolveMul
 
-            -- size of deviations multiplied by current Resolve 
-            -- mod = (1-(currentResolve/averageResolve)) * resolve
-            -- mod = (1-(currentResolve/averageResolve)) * simpleResolve
-            asp = averageResolve/uhm * resolveMul
-        end
+    --         -- size of deviations multiplied by current Resolve 
+    --         -- mod = (1-(currentResolve/averageResolve)) * resolve
+    --         -- mod = (1-(currentResolve/averageResolve)) * simpleResolve
+    --         asp = averageResolve/uhm * resolveMul
+    --     end
 
-        self.trend:SetMod(mod, asp)
-    end
+    --     self.trend:SetMod(mod, asp)
+    -- end
 
     
-    self.power:SetValue(resolve)
-    if resolve == 0 then
-        self.power:Hide()
-    else
-        self.power:Show()
-    end
-    self.power:SetColor(PercentColor(resolve*1.5))
-    self.power:Extend(resolve)
+    -- self.power:SetValue(resolve)
+    -- if resolve == 0 then
+    --     self.power:Hide()
+    -- else
+    --     self.power:Show()
+    -- end
+    -- self.power:SetColor(PercentColor(resolve*1.5))
+    -- self.power:Extend(resolve)
 
-    -- local vp = v*100/resolveMaxPercent
-    -- self.resolve:SetValue(vp)
-    -- self.resolve:SetStatusBarColor(PercentColor(vp*1.5))
+    self.resolve:SetValue(resolve)
+    self.resolve:SetStatusBarColor(PercentColor(resolve*1.5))
 end
 
 function NugHealth:PLAYER_STAGGER_UPDATE(currentStagger)
@@ -324,10 +323,6 @@ function NugHealth:Enable()
         -- self:RegisterUnitEvent("UNIT_AURA", "player");
     elseif NugHealthDB.showResolve then
         self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-        -- self.power:SetMinMaxValues(0,1)
-        -- self.power:SetValue(0)
-        -- self.power.SetColor = MakeSetColor(0.1)
-        -- self.power:SetColor(38/255, 221/255, 163/255)
         self.timeout = 0.3
         self:SetScript("OnUpdate", NugHealth.ResolveOnUpdate)
     end
@@ -443,20 +438,27 @@ function NugHealth.PLAYER_REGEN_ENABLED(self, event)
     self:Hide()
 end
 
-function NugHealth.Create(self)
-	local height = NugHealthDB.height
-    local width = NugHealthDB.width
-    local absorb_width = NugHealthDB.absorb_width
-    local stagger_width = NugHealthDB.stagger_width
-    local trend_width = NugHealthDB.spike_width
-    local incoming_width = 2
 
+local pmult = 1
+local function pixelperfect(size)
+    return floor(size/pmult + 0.5)*pmult
+end
+
+function NugHealth.Create(self)
     local res = GetCVar("gxWindowedResolution") --select(GetCurrentResolution(), GetScreenResolutions())
-    local p = 1
     if res then
         local w,h = string.match(res, "(%d+)x(%d+)")
-        p = (768/h) / UIParent:GetScale()
+        pmult = (768/h) / UIParent:GetScale()
     end
+
+    local p = pmult
+
+    local height = pixelperfect(NugHealthDB.height)
+    local width = pixelperfect(NugHealthDB.width)
+    local absorb_width = pixelperfect(NugHealthDB.absorb_width)
+    local stagger_width = pixelperfect(NugHealthDB.stagger_width)
+    local trend_width = pixelperfect(NugHealthDB.spike_width)
+    -- local incoming_width = pixelp+erfect(2)
 
     self:SetWidth(width)
     self:SetHeight(height)
@@ -790,11 +792,11 @@ function NugHealth.Create(self)
     self.trend = trend
 
     self.Resize = function(self)
-        local height = NugHealthDB.height
-        local width = NugHealthDB.width
-        local absorb_width = NugHealthDB.absorb_width
-        local stagger_width = NugHealthDB.stagger_width
-        local trend_width = NugHealthDB.spike_width
+        local height = pixelperfect(NugHealthDB.height)
+        local width = pixelperfect(NugHealthDB.width)
+        local absorb_width = pixelperfect(NugHealthDB.absorb_width)
+        local stagger_width = pixelperfect(NugHealthDB.stagger_width)
+        local trend_width = pixelperfect(NugHealthDB.spike_width)
 
         self:SetWidth(width)
         self:SetHeight(height)
@@ -1103,22 +1105,22 @@ function NugHealth:CreateGUI()
                         order = 3,
                     },
                     resolve = {
-                        name = "Resolve (Damage taken in the last 5 sec)",
+                        name = "Resolve",
                         type = "toggle",
-                        width = "full",
-                        desc = "Show recent damage taken bar",
+                        -- width = "full",
+                        desc = "Damage taken in the last 5 sec",
                         get = function(info) return NugHealthDB.showResolve end,
                         set = function(info, v) NugHealth.Commands.resolve(nil, true) end,
                         order = 4,
                     },
-                    resolveSpikes = {
-                        name = "Show Resolve Spikes",
-                        type = "toggle",
-                        desc = "Shows difference between current resolve and the average for the last 10s",
-                        get = function(info) return NugHealthDB.showResolveSpikes end,
-                        set = function(info, v) NugHealth.Commands.resolvespikes() end,
-                        order = 4.1,
-                    },
+                    -- resolveSpikes = {
+                    --     name = "Show Resolve Spikes",
+                    --     type = "toggle",
+                    --     desc = "Shows difference between current resolve and the average for the last 10s",
+                    --     get = function(info) return NugHealthDB.showResolveSpikes end,
+                    --     set = function(info, v) NugHealth.Commands.resolvespikes() end,
+                    --     order = 4.1,
+                    -- },
 					resolveLimit = {
                         name = "Resolve Limit",
                         type = "range",
