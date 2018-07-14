@@ -463,7 +463,7 @@ function NugHealth.Create(self)
     self:SetWidth(width)
     self:SetHeight(height)
     local backdrop = {
-        bgFile = "Interface\\Addons\\NugHealth\\white", tile = true, tileSize = 0,
+        bgFile = "Interface\\BUTTONS\\WHITE8X8", tile = true, tileSize = 0,
         insets = {left = -2*p, right = -2*p, top = -2*p, bottom = -2*p},
     }
     self:SetBackdrop(backdrop)
