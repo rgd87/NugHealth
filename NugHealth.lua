@@ -28,6 +28,7 @@ local isMonk = select(2, UnitClass"player") == "MONK"
 local vengeanceMinRange = 7000
 local vengeanceMaxRange = 200000
 local vengeanceRedRange = 60000
+local healthTextFont = [[Interface\AddOns\NugHealth\Emblem.ttf]]
 
 local staggerMul = 1
 local resolveMul = 1
@@ -54,7 +55,11 @@ local defaults = {
     staggerLimit = 100,
     useCLH = true,
     lowhpcolor = false,
-    lowhpFlash = false
+    lowhpFlash = false,
+    hideOutOfCombat = true,
+    healthText = false,
+    healthTextSize = 13,
+    healthTextOffset = 5,
 }
 
 local function PercentColor(percent)
@@ -118,7 +123,11 @@ function NugHealth.PLAYER_LOGIN(self, event)
     -- self:UNIT_MAXHEALTH()
     self:UNIT_HEALTH()
     -- self:UNIT_AURA()
-    if InCombatLockdown() then self:Show() else self:Hide() end
+    if InCombatLockdown() or not NugHealthDB.hideOutOfCombat then
+        self:Show()
+    else
+        self:Hide()
+    end
 end
 
 function NugHealth.SPELLS_CHANGED(self, event)
@@ -258,15 +267,14 @@ function NugHealth:PLAYER_STAGGER_UPDATE(currentStagger)
         self.trend:SetMod(mod, asp)
     end
 
-    self.power:SetValue(stagger)
     if stagger == 0 then
         self.power:Hide()
     else
-        -- print(stagger, self.power:GetMinMaxValues(), self.power:GetValue())
         self.power:Show()
+        self.power:SetValue(stagger)
+        self.power:SetColor(PercentColor(stagger))
+        self.power:Extend(stagger)
     end
-    self.power:SetColor(PercentColor(stagger))
-    self.power:Extend(stagger)
 end
 
 
@@ -316,7 +324,7 @@ function NugHealth:Enable()
         -- self.power.SetColor = MakeSetColor(0.1)
         -- self.power.auraname = GetSpellInfo(115307)
         -- self.power:SetColor(38/255, 221/255, 163/255)
-        self.power:Show()
+        -- self.power:Show()
 
         -- self.power.auraname = GetSpellInfo(215479)
         -- self.power:SetColor(80/255, 83/255, 150/255)
@@ -388,6 +396,7 @@ function NugHealth.UNIT_HEALTH(self, event)
     local vp = h/mh
 
     self.health:SetValue(vp)
+    self.health.text:SetText(math.floor(vp*100 + 0.5))
     self.absorb:SetValue(a/mh, vp)
     self.absorb2:SetValue((h+a)/mh)
     if vp >= self.healthlost.currentvalue or not UnitAffectingCombat("player") then
@@ -431,11 +440,64 @@ end
 --     -- self.power:SetMinMaxValues(0, max)
 -- end
 
+
+-- local doFadeOut = true
+-- local fadeAfter = 3
+-- local fadeTime = 1
+-- local fader = CreateFrame("Frame", nil, NugHealth)
+-- NugHealth.fader = fader
+-- local HideTimer = function(self, time)
+--     self.OnUpdateCounter = (self.OnUpdateCounter or 0) + time
+--     if self.OnUpdateCounter < fadeAfter then return end
+
+--     local nhe = NugHealth
+--     local p = fadeTime - ((self.OnUpdateCounter - fadeAfter) / fadeTime)
+--     -- if p < 0 then p = 0 end
+--     -- local ooca = NugHealthDB.outOfCombatAlpha 
+--     -- local a = ooca + ((1 - ooca) * p)
+--     local pA = NugHealthDB.outOfCombatAlpha
+--     local rA = 1 - NugHealthDB.outOfCombatAlpha
+--     local a = pA + (p*rA)
+--     nhe:SetAlpha(a)
+--     nhe.healthlost:Hide()
+--     nhe.absorb2:Hide()
+--     if self.OnUpdateCounter >= fadeAfter + fadeTime then
+--         self:SetScript("OnUpdate",nil)
+--         if nhe:GetAlpha() <= 0.03 then
+--             nhe:Hide()
+--         end
+--         nhe.hiding = false
+--         self.OnUpdateCounter = 0
+--     end
+-- end
+-- function NugHealth:StartHiding()
+--     if (not self.hiding and self:IsVisible())  then
+--         fader:SetScript("OnUpdate", HideTimer)
+--         fader.OnUpdateCounter = 0
+--         self.hiding = true
+--     end
+-- end
+
+-- function NugHealth:StopHiding()
+--     -- if self.hiding then
+--         fader:SetScript("OnUpdate", nil)
+--         local nhe = NugHealth
+--         nhe:SetAlpha(1)
+--         nhe.healthlost:Show()
+--         nhe.absorb2:Show()
+--         self.hiding = false
+--     -- end
+-- end
+
 function NugHealth.PLAYER_REGEN_DISABLED(self, event)
+    -- self:StopHiding()
     self:Show()
 end
 function NugHealth.PLAYER_REGEN_ENABLED(self, event)
-    self:Hide()
+    if NugHealthDB.hideOutOfCombat then
+        self:Hide()
+        -- self:StartHiding()
+    end
 end
 
 
@@ -509,9 +571,16 @@ function NugHealth.Create(self)
 
     self.healthlost = hplost
 
+    local htext = hp:CreateFontString()
+    htext:SetFont(healthTextFont, NugHealthDB.healthTextSize)
+    htext:SetPoint("TOP", hp, "TOP",0, -NugHealthDB.healthTextOffset)
+    if not NugHealthDB.healthText then htext:Hide() end
+    hp.text = htext
+
     hp.SetColor = function(self, r,g,b)
         self:SetStatusBarColor(r*0.2,g*0.2,b*0.2)
         self.bg:SetVertexColor(r,g,b)
+        self.text:SetTextColor(r*0.2,g*0.2,b*0.2)
     end
 
 	hp.RestoreColor = function(self)
@@ -524,7 +593,7 @@ function NugHealth.Create(self)
 	    end
 	end
 
-	hp:RestoreColor()
+    hp:RestoreColor()
 
 
     self.health = hp
@@ -719,7 +788,7 @@ function NugHealth.Create(self)
     powerbar:GetStatusBarTexture():SetDrawLayer("ARTWORK",-2)
     powerbar:SetOrientation("VERTICAL")
     powerbar:SetMinMaxValues(0, 1)
-    powerbar:SetValue(0)
+    powerbar:SetValue(0.5)
     local backdrop = {
         bgFile = "Interface\\BUTTONS\\WHITE8X8", tile = true, tileSize = 0,
         insets = {left = -2*p, right = -2*p, top = -2*p, bottom = -2*p},
@@ -809,6 +878,15 @@ function NugHealth.Create(self)
         self.resolve.maxheight = height
         self.glowtex:SetWidth(width*hmul)
         self.glowtex:SetHeight(height*vmul)
+
+        local htext = self.health.text
+        if NugHealthDB.healthText then
+            htext:Show()
+            htext:SetFont(healthTextFont, NugHealthDB.healthTextSize)
+            htext:SetPoint("TOP", hp, "TOP",0, -NugHealthDB.healthTextOffset)
+        else
+            htext:Hide()
+        end
     end
 
 
@@ -925,8 +1003,11 @@ NugHealth.Commands = {
     ["lock"] = function(v)
         NugHealth:EnableMouse(false)
         local self = NugHealth
-        if InCombatLockdown() then self:Show() else self:Hide() end
-
+        if InCombatLockdown() or not NugHealthDB.hideOutOfCombat then
+            self:Show()
+        else
+            self:Hide()
+        end
     end,
 
     ["resolve"] = function(v, silent)
@@ -1166,6 +1247,57 @@ function NugHealth:CreateGUI()
                         set = function(info, v) NugHealth.Commands.useclh() end,
                         order = 7.5,
                     },
+
+                    healthText = {
+                        name = "Show Health Percentage",
+                        type = "toggle",
+                        get = function(info) return NugHealthDB.healthText end,
+                        set = function(info, v)
+                            NugHealthDB.healthText = not NugHealthDB.healthText
+                            NugHealth:Resize()
+                        end,
+                        order = 7.6,
+                    },
+                    healthTextSize = {
+                        name = "Health Text Size",
+                        type = "range",
+                        get = function(info) return NugHealthDB.healthTextSize end,
+                        set = function(info, v)
+                            NugHealthDB.healthTextSize = tonumber(v)
+                            NugHealth:Resize()
+                        end,
+                        min = 5,
+                        max = 30,
+                        step = 1,
+                        order = 7.7,
+                    },
+                    healthTextOffset = {
+                        name = "Health Text Offset",
+                        type = "range",
+                        get = function(info) return NugHealthDB.healthTextOffset end,
+                        set = function(info, v)
+                            NugHealthDB.healthTextOffset = tonumber(v)
+                            NugHealth:Resize()
+                        end,
+                        min = 0,
+                        max = 400,
+                        step = 1,
+                        order = 7.8,
+                    },
+                    hideOutOfCombat = {
+                        name = "Hide Out of Combat",
+                        type = "toggle",
+                        width = "full",
+                        get = function(info) return NugHealthDB.hideOutOfCombat end,
+                        set = function(info, v)
+                            NugHealthDB.hideOutOfCombat = not NugHealthDB.hideOutOfCombat
+                            NugHealth:PLAYER_LOGIN()
+                        end,
+                        order = 7.9,
+                    },
+
+
+
                     width = {
                         name = "Width",
                         type = "range",
