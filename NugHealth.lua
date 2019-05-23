@@ -276,6 +276,16 @@ function NugHealth:PLAYER_STAGGER_UPDATE(currentStagger)
         self.power:SetColor(PercentColor(stagger))
         self.power:Extend(stagger)
     end
+
+    if not NugHealthDB.healthText then
+        local htext = self.health.text
+        if stagger > 0.9 then
+            htext:Show()
+            htext:SetText(math.floor(simpleStagger*100 + 0.5))
+        else
+            htext:Hide()
+        end
+    end
 end
 
 
@@ -1251,16 +1261,18 @@ function NugHealth:CreateGUI()
                         order = 7.5,
                     },
 
-                    healthText = {
-                        name = "Show Health Percentage",
+                    hideOutOfCombat = {
+                        name = "Hide Out of Combat",
                         type = "toggle",
-                        get = function(info) return NugHealthDB.healthText end,
+                        width = "full",
+                        get = function(info) return NugHealthDB.hideOutOfCombat end,
                         set = function(info, v)
-                            NugHealthDB.healthText = not NugHealthDB.healthText
-                            NugHealth:Resize()
+                            NugHealthDB.hideOutOfCombat = not NugHealthDB.hideOutOfCombat
+                            NugHealth:PLAYER_LOGIN()
                         end,
                         order = 7.6,
                     },
+
                     healthTextSize = {
                         name = "Health Text Size",
                         type = "range",
@@ -1287,19 +1299,17 @@ function NugHealth:CreateGUI()
                         step = 1,
                         order = 7.8,
                     },
-                    hideOutOfCombat = {
-                        name = "Hide Out of Combat",
+                    
+                    healthText = {
+                        name = "Show Health Percentage",
                         type = "toggle",
-                        width = "full",
-                        get = function(info) return NugHealthDB.hideOutOfCombat end,
+                        get = function(info) return NugHealthDB.healthText end,
                         set = function(info, v)
-                            NugHealthDB.hideOutOfCombat = not NugHealthDB.hideOutOfCombat
-                            NugHealth:PLAYER_LOGIN()
+                            NugHealthDB.healthText = not NugHealthDB.healthText
+                            NugHealth:Resize()
                         end,
                         order = 7.9,
                     },
-
-
 
                     width = {
                         name = "Width",
