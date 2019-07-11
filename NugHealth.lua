@@ -23,7 +23,8 @@ local math_max = math.max
 local lowhpcolor = false
 local showSpikes = true
 local isMonk = select(2, UnitClass"player") == "MONK"
-
+local isClassic = select(4,GetBuildInfo()) <= 19999
+local GetSpecialization = isClassic and function() return nil end or _G.GetSpecialization   
 
 local vengeanceMinRange = 7000
 local vengeanceMaxRange = 200000
@@ -322,7 +323,9 @@ function NugHealth:Enable()
         end
     end
     -- self:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
-    self:RegisterUnitEvent("UNIT_ABSORB_AMOUNT_CHANGED", "player")
+    if not isClassic then
+        self:RegisterUnitEvent("UNIT_ABSORB_AMOUNT_CHANGED", "player")
+    end
     -- self:RegisterUnitEvent("UNIT_HEAL_PREDICTION", "player")
 
 
@@ -402,7 +405,7 @@ end
 function NugHealth.UNIT_HEALTH(self, event)
     local h = UnitHealth("player")
     local mh = UnitHealthMax("player")
-    local a = UnitGetTotalAbsorbs("player")
+    local a = isClassic and 0 or UnitGetTotalAbsorbs("player")
     if mh == 0 then return end
     local vp = h/mh
 
