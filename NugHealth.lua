@@ -53,7 +53,7 @@ local defaults = {
     showResolveSpikes = false,
     resolveLimit = 100,
     staggerLimit = 100,
-    useCLH = true,
+    useCLH = false,
     lowhpcolor = false,
     lowhpFlash = false,
     hideOutOfCombat = true,
@@ -172,7 +172,7 @@ local lastStagger
 function NugHealth.StaggerOnUpdate(self, time)
     -- if NugHealth.ResolveOnUpdate(self, time) then return end
     local currentStagger = UnitStagger("player")
-    --stagger updates like 2 times a second on average, 
+    --stagger updates like 2 times a second on average,
     if currentStagger ~= lastStagger then
         lastStagger = currentStagger
 
@@ -205,7 +205,7 @@ function NugHealth:PLAYER_RESOLVE_UPDATE()
 
     -- resolveMul is 100 / resolveLimit setting
     local resolve = simpleDP5 * resolveMul
-    
+
     -- if showSpikes then
     --     staggerHistory[GetTime()] = currentResolve
     --     local averageResolve = GetAverageStagger(staggerAverageTimeFrame)
@@ -216,7 +216,7 @@ function NugHealth:PLAYER_RESOLVE_UPDATE()
     --         -- just showing difference between current stagger and average stagger
     --         mod = -(currentResolve - averageResolve)/uhm * resolveMul
 
-    --         -- size of deviations multiplied by current Resolve 
+    --         -- size of deviations multiplied by current Resolve
     --         -- mod = (1-(currentResolve/averageResolve)) * resolve
     --         -- mod = (1-(currentResolve/averageResolve)) * simpleResolve
     --         asp = averageResolve/uhm * resolveMul
@@ -225,7 +225,7 @@ function NugHealth:PLAYER_RESOLVE_UPDATE()
     --     self.trend:SetMod(mod, asp)
     -- end
 
-    
+
     -- self.power:SetValue(resolve)
     -- if resolve == 0 then
     --     self.power:Hide()
@@ -246,7 +246,7 @@ function NugHealth:PLAYER_STAGGER_UPDATE(currentStagger)
 
 
     if showSpikes then
-        staggerHistory[GetTime()] = currentStagger    
+        staggerHistory[GetTime()] = currentStagger
         local averageStagger = GetAverageStagger(staggerAverageTimeFrame)
 
         local mod = 0
@@ -258,7 +258,7 @@ function NugHealth:PLAYER_STAGGER_UPDATE(currentStagger)
             -- unmodified deviations
             -- mod = (1-(currentStagger/averageStagger)) * 0.5
 
-            -- size of deviations multiplied by current stagger 
+            -- size of deviations multiplied by current stagger
             -- mod = (1-(currentStagger/averageStagger)) * stagger
             -- mod = (1-(currentStagger/averageStagger)) * simpleStagger
             asp = averageStagger/uhm * staggerMul
@@ -307,6 +307,7 @@ end
 function NugHealth:Enable()
     playerGUID = UnitGUID("player")
 
+    NugHealthDB.useCLH = false
     if LibCLHealth and NugHealthDB.useCLH then
         self:UnregisterEvent("UNIT_HEALTH")
         UnitHealth = LibCLHealth.UnitHealth
@@ -324,7 +325,7 @@ function NugHealth:Enable()
     self:RegisterUnitEvent("UNIT_ABSORB_AMOUNT_CHANGED", "player")
     -- self:RegisterUnitEvent("UNIT_HEAL_PREDICTION", "player")
 
-    
+
     if isMonk then
         self.timeout = 0.05
         self:SetScript("OnUpdate", NugHealth.StaggerOnUpdate)
@@ -463,7 +464,7 @@ end
 --     local nhe = NugHealth
 --     local p = fadeTime - ((self.OnUpdateCounter - fadeAfter) / fadeTime)
 --     -- if p < 0 then p = 0 end
---     -- local ooca = NugHealthDB.outOfCombatAlpha 
+--     -- local ooca = NugHealthDB.outOfCombatAlpha
 --     -- local a = ooca + ((1 - ooca) * p)
 --     local pA = NugHealthDB.outOfCombatAlpha
 --     local rA = 1 - NugHealthDB.outOfCombatAlpha
@@ -776,7 +777,7 @@ function NugHealth.Create(self)
     -- end
 
     -- self.incoming = incoming
-    
+
 
 
     local powerbar = CreateFrame("StatusBar", nil, self)
@@ -821,13 +822,13 @@ function NugHealth.Create(self)
 
     self.power = powerbar
 
-    
+
 
     local trend = CreateFrame("Frame", nil, powerbar)
     trend:SetFrameLevel(3)
     trend:SetWidth(trend_width)
     trend:SetHeight(height*0.25)
-    
+
     local ttex = trend:CreateTexture(nil, "ARTWORK", nil, 0)
     ttex:SetTexture("Interface\\BUTTONS\\WHITE8X8")
     ttex:SetAllPoints()
@@ -847,7 +848,7 @@ function NugHealth.Create(self)
             local mod2 = math_min(0.75, mod)
             -- local ah = math_min(averageStagger, 0.75)*height
             local ah = averageStagger*height
-            self:SetPoint("TOPLEFT", powerbar, "BOTTOMRIGHT", 0, ah) 
+            self:SetPoint("TOPLEFT", powerbar, "BOTTOMRIGHT", 0, ah)
             self:SetHeight(mod2*height)
             self.texture:SetVertexColor(0,1,0)
             self:Show()
@@ -859,10 +860,10 @@ function NugHealth.Create(self)
             -- spike bar won't be starting higher than 75% stagger position.
             -- it's maximum length is also 75% of frame height
             -- and the actual stagger bar itself also extends from 100% to 150% stagger if needed
-            self:SetPoint("BOTTOMLEFT", powerbar, "BOTTOMRIGHT", 0, ah) 
+            self:SetPoint("BOTTOMLEFT", powerbar, "BOTTOMRIGHT", 0, ah)
             self:SetHeight(-mod2*height)
             self.texture:SetVertexColor(1,0,0)
-            self:Show()            
+            self:Show()
         else
             self:Hide()
         end
@@ -1248,15 +1249,6 @@ function NugHealth:CreateGUI()
                         step = 10,
                         order = 7,
                     },
-                    clh = {
-                        name = "Use LibCombatLogHealth",
-                        type = "toggle",
-                        width = "full",
-                        desc = "Fast health updates for nerds",
-                        get = function(info) return NugHealthDB.useCLH end,
-                        set = function(info, v) NugHealth.Commands.useclh() end,
-                        order = 7.5,
-                    },
 
                     hideOutOfCombat = {
                         name = "Hide Out of Combat",
@@ -1296,7 +1288,7 @@ function NugHealth:CreateGUI()
                         step = 1,
                         order = 7.8,
                     },
-                    
+
                     healthText = {
                         name = "Show Health Percentage",
                         type = "toggle",
