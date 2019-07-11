@@ -1,3 +1,8 @@
+### 8.2.0:
+
+- Updated TOC
+- Disabled LibCLH
+
 ### 8.0.3:
 
 - changed default max resolve to 100% health
@@ -50,9 +55,9 @@
 
 ### 7.0.2:
 
-- Fixed a bug with absorbed damage from spell that caused incorrect 
+- Fixed a bug with absorbed damage from spell that caused incorrect
 damage values
-- Default resolve limit set to 180 (percent of health taken as damage 
+- Default resolve limit set to 180 (percent of health taken as damage
  during last 5)
 
 ### 7.0.0:
