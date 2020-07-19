@@ -8,6 +8,13 @@ local function pixelperfect(size)
     return floor(size/pmult + 0.5)*pmult
 end
 
+local MakeBorder = function(self, tex, left, right, top, bottom, drawLayer, level)
+    local t = self:CreateTexture(nil, drawLayer, nil, level)
+    t:SetTexture(tex)
+    t:SetPoint("TOPLEFT", self, "TOPLEFT", left, -top)
+    t:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", -right, bottom)
+    return t
+end
 
 local CompositeBorder_Set = function(self, left, right, top, bottom)
     local frame = self[5]
@@ -225,7 +232,236 @@ local function CreateAbsorbSideBar(hp, absorbWidth)
 end
 
 
+
+---------------------------
+-- Stagger Spikes
+---------------------------
+
+local math_min = math.min
+local StaggerSpikeSetModVertical = function(self, mod, averageStagger)
+    local stagger = self:GetParent()
+    local frameLength = stagger.frameLength
+    if mod > 0 then
+        self:ClearAllPoints()
+        local mod2 = math_min(0.75, mod)
+        -- local ah = math_min(averageStagger, 0.75)*frameLength
+        local ah = averageStagger*frameLength
+        self:SetPoint("TOPLEFT", stagger, "BOTTOMRIGHT", 0, ah)
+        self:SetHeight(mod2*frameLength)
+        self.texture:SetVertexColor(0,1,0)
+        self:Show()
+    elseif mod < 0 then
+        self:ClearAllPoints()
+        local mod2 = math.max(-0.75, mod)
+        -- local ah = math_min(averageStagger, 0.75)*frameLength
+        local ah = averageStagger*frameLength
+        -- spike bar won't be starting higher than 75% stagger position.
+        -- it's maximum length is also 75% of frame frameLength
+        -- and the actual stagger bar itself also extends from 100% to 150% stagger if needed
+        self:SetPoint("BOTTOMLEFT", stagger, "BOTTOMRIGHT", 0, ah)
+        self:SetHeight(-mod2*frameLength)
+        self.texture:SetVertexColor(1,0,0)
+        self:Show()
+    else
+        self:Hide()
+    end
+end
+local StaggerSpikeSetModHorizontal = function(self, mod, averageStagger)
+    local stagger = self:GetParent()
+    local frameLength = stagger.frameLength
+    if mod > 0 then
+        self:ClearAllPoints()
+        local mod2 = math_min(0.75, mod)
+        local ah = averageStagger*frameLength
+        self:SetPoint("TOPRIGHT", stagger, "BOTTOMLEFT", ah, 0)
+        self:SetWidth(mod2*frameLength)
+        self.texture:SetVertexColor(0,1,0)
+        self:Show()
+    elseif mod < 0 then
+        self:ClearAllPoints()
+        local mod2 = math.max(-0.75, mod)
+        local ah = averageStagger*frameLength
+        self:SetPoint("TOPLEFT", stagger, "BOTTOMLEFT", ah, 0)
+        self:SetWidth(-mod2*frameLength)
+        self.texture:SetVertexColor(1,0,0)
+        self:Show()
+    else
+        self:Hide()
+    end
+end
+local function CreateStaggerSpikebar(parent)
+    local height = pixelperfect(NugHealthDB.height)
+    local width = pixelperfect(NugHealthDB.width)
+    local trend_width = pixelperfect(NugHealthDB.spike_width)
+
+    local trend = CreateFrame("Frame", nil, parent)
+    trend:SetFrameLevel(3)
+    trend:SetWidth(trend_width)
+    trend:SetHeight(height*0.25)
+
+    local ttex = trend:CreateTexture(nil, "ARTWORK", nil, 0)
+    ttex:SetTexture("Interface\\BUTTONS\\WHITE8X8")
+    ttex:SetAllPoints()
+    trend.texture = ttex
+
+    local p = pixelperfect(1)
+    local outline = MakeBorder(trend, "Interface\\BUTTONS\\WHITE8X8", -p, -p, -p, -p, "BACKGROUND", -2)
+    outline:SetVertexColor(0,0,0,1)
+
+
+    trend.SetMod = StaggerSpikeSetModVertical
+
+    return trend
+end
+------------------
+-- Stagger Bar
+------------------
+
+local StaggerExtendV = function(self, v)
+    if v > 1.5 then v = 1.5 end
+    if v > 1 then
+        self:SetHeight(self.frameLength*v)
+    else
+        self:SetHeight(self.frameLength)
+    end
+end
+local StaggerExtendH = function(self, v)
+    if v > 1.5 then v = 1.5 end
+    if v > 1 then
+        self:SetWidth(self.frameLength*v)
+    else
+        self:SetWidth(self.frameLength)
+    end
+end
+local function AlignStagger(stagger, width, height, orientation)
+    local stagger_width = pixelperfect(NugHealthDB.stagger_width)
+    local trend_width = pixelperfect(NugHealthDB.spike_width)
+    local parent = stagger:GetParent()
+    stagger:SetOrientation(orientation)
+    stagger:ClearAllPoints()
+    if orientation == "VERTICAL" then
+        stagger.frameLength = height
+        stagger:SetWidth(stagger_width)
+        stagger:SetPoint("BOTTOMLEFT", parent, "BOTTOMRIGHT",2,0)
+        stagger:SetHeight(height)
+        stagger.Extend = StaggerExtendV
+
+        stagger.trend:ClearAllPoints()
+        stagger.trend:SetWidth(trend_width)
+        stagger.trend.SetMod = StaggerSpikeSetModVertical
+    else
+        stagger.frameLength = width
+        stagger:SetWidth(width)
+        stagger:SetPoint("TOPLEFT", parent, "BOTTOMLEFT",0,-2)
+        stagger:SetHeight(stagger_width)
+        stagger.Extend = StaggerExtendH
+
+        stagger.trend:ClearAllPoints()
+        stagger.trend:SetHeight(trend_width)
+        stagger.trend.SetMod = StaggerSpikeSetModHorizontal
+    end
+end
+local function CreateStaggerBar(self)
+    local height = pixelperfect(NugHealthDB.height)
+    local width = pixelperfect(NugHealthDB.width)
+    local stagger_width = pixelperfect(NugHealthDB.stagger_width)
+
+    local stagger = CreateFrame("StatusBar", nil, self)
+    stagger:SetWidth(stagger_width)
+    stagger:SetPoint("BOTTOMLEFT",self,"BOTTOMRIGHT",2,0)
+    stagger:SetHeight(height)
+    stagger.frameLength = height
+    stagger.Extend = StaggerExtendV
+
+    stagger:SetStatusBarTexture("Interface\\BUTTONS\\WHITE8X8")
+    stagger:GetStatusBarTexture():SetDrawLayer("ARTWORK",-2)
+    stagger:SetOrientation("VERTICAL")
+    stagger:SetMinMaxValues(0, 1)
+    stagger:SetValue(0.5)
+
+    local p = pixelperfect(1)
+    local outline = MakeBorder(stagger, "Interface\\BUTTONS\\WHITE8X8", -p, -p, -p, -p, "BACKGROUND", -2)
+    outline:SetVertexColor(0,0,0,1)
+
+    local stbg = stagger:CreateTexture(nil,"ARTWORK",nil,-3)
+    stbg:SetAllPoints(stagger)
+    stbg:SetTexture("Interface\\BUTTONS\\WHITE8X8")
+    stagger.bg = stbg
+
+    stagger.SetColor = ns.MakeSetColor(0.1)
+    stagger.Align = AlignStagger
+
+    -- stagger:SetScript("OnUpdate", function(self, time)
+        -- self:SetValue( self.endTime - GetTime())
+    -- end)
+
+    stagger:Hide()
+    return stagger
+end
+
+---------------------
+-- Resolve Bar
+---------------------
+
+
+local Resolve_SetValueVertical = function(self, p)
+    if p > 1 then p = 1 end
+    if p < 0 then p = 0 end
+    if p == 0 then self:Hide() else self:Show() end
+    self:SetHeight(p*self.frameLength)
+end
+local Resolve_SetValueHorizontal = function(self, p)
+    if p > 1 then p = 1 end
+    if p < 0 then p = 0 end
+    if p == 0 then self:Hide() else self:Show() end
+    self:SetWidth(p*self.frameLength)
+end
+local function AlignResolve(resolve, width, height, orientation)
+    resolve:ClearAllPoints()
+    local parent = resolve:GetParent()
+    if orientation == "VERTICAL" then
+        resolve.frameLength = height
+        resolve:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT",0,0)
+        resolve:SetWidth(6)
+        resolve.SetValue = Resolve_SetValueVertical
+    else
+        resolve.frameLength = width
+        resolve:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT",0,0)
+        resolve:SetHeight(6)
+        resolve.SetValue = Resolve_SetValueHorizontal
+    end
+end
+local function CreateResolveBar(self)
+    local resolve = CreateFrame("Frame", nil, self)
+    resolve:SetPoint("BOTTOMRIGHT",self,"BOTTOMRIGHT",0,0)
+    resolve:SetWidth(6)
+
+    local at = resolve:CreateTexture(nil, "ARTWORK", nil, -4)
+    at:SetTexture"Interface\\BUTTONS\\WHITE8X8"
+    -- at:SetVertexColor(.7, .7, 1, 1)
+    resolve.texture = at
+    at:SetAllPoints(resolve)
+
+    local p = pixelperfect(1)
+    local outline = MakeBorder(resolve, "Interface\\BUTTONS\\WHITE8X8", -p, -p, -p, -p, "ARTWORK", -5)
+    outline:SetVertexColor(0,0,0,1)
+
+    resolve.frameLength = self:GetHeight()
+    resolve.SetValue = Resolve_SetValueVertical
+    resolve:SetValue(0)
+
+    resolve.Align = AlignResolve
+
+    resolve.SetStatusBarColor = function(self, r,g,b)
+        self.texture:SetVertexColor(r,g,b)
+    end
+    return resolve
+end
+
+
 local function Reconf(self)
+
+    -- TODO: Restore glowtex
 
     local db = NugHealthDB
     local isVertical = db.healthOrientation == "VERTICAL"
@@ -235,17 +471,13 @@ local function Reconf(self)
     self.health:GetStatusBarTexture():SetDrawLayer("ARTWORK",-6)
     self.health.bg:SetTexture(texpath)
 
-    local texpath2 = LSM:Fetch("statusbar", db.healthTexture)
-    self.resolve:SetStatusBarTexture(texpath2)
-    self.resolve:GetStatusBarTexture():SetDrawLayer("ARTWORK",-6)
-    self.resolve.bg:SetTexture(texpath2)
 
     -- if not db.fgShowMissing then
     --     -- Blizzard's StatusBar SetFillStyle is bad, because even if it reverses direction,
     --     -- it still cuts tex coords from the usual direction
     --     -- So i'm using custom status bar for health and resolve
     --     self.health:SetFillStyle("STANDARD")
-    --     self.resolve:SetFillStyle("STANDARD")
+    --     -- self.resolve:SetFillStyle("STANDARD")
 
     --     -- self.health.SetColor = HealthBarSetColorInverted
     --     -- self.resolve.SetColor = HealthBarSetColorInverted
@@ -257,7 +489,6 @@ local function Reconf(self)
     --     self.health.incoming:SetDrawLayer("ARTWORK", -7)
     -- else
         self.health:SetFillStyle("REVERSE")
-        self.resolve:SetFillStyle("REVERSE")
         -- self.health.SetColor = HealthBarSetColor
         -- self.resolve.SetColor = HealthBarSetColor
         -- self.text1.SetColor = Text1_SetColor
@@ -283,11 +514,34 @@ local function Reconf(self)
     --     self.text1:SetShadowOffset(0,0)
     -- end
 
+    local height = pixelperfect(NugHealthDB.height)
+    local width = pixelperfect(NugHealthDB.width)
+    local absorb_width = pixelperfect(NugHealthDB.absorb_width)
+    local stagger_width = pixelperfect(NugHealthDB.stagger_width)
+    local trend_width = pixelperfect(NugHealthDB.spike_width)
+
+    self:SetWidth(width)
+    self:SetHeight(height)
+    -- self.trend:SetWidth(trend_width)
+    -- self.absorb.maxheight = height
+    -- self.absorb:SetWidth(absorb_width)
+
+    -- self.glowtex:SetWidth(width*hmul)
+    -- self.glowtex:SetHeight(height*vmul)
+
+    local htext = self.health.text
+    if NugHealthDB.healthText then
+        htext:Show()
+
+    else
+        htext:Hide()
+    end
+
     if isVertical then
         self.health:SetOrientation("VERTICAL")
-        self.resolve:SetOrientation("VERTICAL")
+        -- self.resolve:SetOrientation("VERTICAL")
 
-        local frameLength = db.height
+        local frameLength = pixelperfect(db.height)
         self.health.frameLength = frameLength
 
         self.health:ClearAllPoints()
@@ -295,18 +549,23 @@ local function Reconf(self)
         self.health:SetPoint("TOPRIGHT",self,"TOPRIGHT",0,0)
         self.health:SetHeight(frameLength)
 
-        self.resolve:ClearAllPoints()
-        self.resolve:SetWidth(4)
-        self.resolve:SetPoint("TOPRIGHT",self,"TOPRIGHT",0,0)
-        self.resolve:SetHeight(frameLength)
-        -- self.resolve:OnPowerTypeChange()
+        htext:ClearAllPoints()
+        htext:SetFont(healthTextFont, NugHealthDB.healthTextSize)
+        htext:SetPoint("TOP", self.health, "TOP",0, -NugHealthDB.healthTextOffset)
+
+        self.stagger:Align(width, height, "VERTICAL")
+
+        self.resolve:Align(width, height, "VERTICAL")
+
+        self.trend:SetHeight(frameLength)
+        self.trend:SetWidth(trend_width)
 
         local  absorb = self.health.absorb
         absorb:ClearAllPoints()
-        absorb:SetWidth(3)
+        absorb:SetWidth(absorb_width)
         absorb.orientation = "VERTICAL"
         absorb.AlignAbsorb = AlignAbsorbVertical
-        Aptechka:UNIT_ABSORB_AMOUNT_CHANGED(nil, self.unit)
+        -- Aptechka:UNIT_ABSORB_AMOUNT_CHANGED(nil, self.unit)
 
         local flashPool = self.flashPool
         flashPool.UpdatePosition = flashPool.UpdatePositionVertical
@@ -324,9 +583,9 @@ local function Reconf(self)
         hpi.UpdatePosition = hpi.UpdatePositionVertical
     else
         self.health:SetOrientation("HORIZONTAL")
-        self.resolve:SetOrientation("HORIZONTAL")
+        -- self.resolve:SetOrientation("HORIZONTAL")
 
-        local frameLength = db.width
+        local frameLength = pixelperfect(db.width)
         self.health.frameLength = frameLength
 
         self.health:ClearAllPoints()
@@ -334,10 +593,13 @@ local function Reconf(self)
         self.health:SetPoint("BOTTOMLEFT",self,"BOTTOMLEFT",0,0)
         self.health:SetWidth(frameLength)
 
-        self.resolve:ClearAllPoints()
-        self.resolve:SetHeight(4)
-        self.resolve:SetPoint("BOTTOMLEFT",self,"BOTTOMLEFT",0,0)
-        self.resolve:SetWidth(frameLength)
+        htext:ClearAllPoints()
+        htext:SetFont(healthTextFont, NugHealthDB.healthTextSize)
+        htext:SetPoint("RIGHT", self.health, "RIGHT", -NugHealthDB.healthTextOffset, 0)
+
+        self.stagger:Align(width, height, "HORIZONTAL")
+
+        self.resolve:Align(width, height, "HORIZONTAL")
         -- self.resolve:OnPowerTypeChange()
 
         local absorb = self.health.absorb
@@ -387,13 +649,14 @@ function NugHealth.Create(self)
     local width = pixelperfect(NugHealthDB.width)
     local absorb_width = pixelperfect(NugHealthDB.absorb_width)
     local stagger_width = pixelperfect(NugHealthDB.stagger_width)
-    local trend_width = pixelperfect(NugHealthDB.spike_width)
+
     self:SetWidth(width)
     self:SetHeight(height)
 
     self.state = {}
 
     self.ReconfigureUnitFrame = Reconf
+    self.Resize = Reconf
 
     local outline = MakeCompositeBorder(self, "Interface\\BUTTONS\\WHITE8X8", outlineSize, outlineSize, outlineSize, outlineSize, "BACKGROUND", -2)
     -- outline:Set(1,1,1,1)
@@ -402,87 +665,14 @@ function NugHealth.Create(self)
     -- Resolve
     --------------
 
-    local resolve = ns.CreateCustomStatusBar(nil, self, "VERTICAL")
-    resolve:SetParent(self)
-    resolve:SetPoint("BOTTOMRIGHT",self,"BOTTOMRIGHT",0,0)
-    resolve:SetWidth(6)
-
-    local at = resolve:CreateTexture(nil, "ARTWORK", nil, -4)
-    at:SetTexture"Interface\\BUTTONS\\WHITE8X8"
-    -- at:SetVertexColor(.7, .7, 1, 1)
-    resolve.texture = at
-    at:SetAllPoints(resolve)
-
-    local atbg = resolve:CreateTexture(nil, "ARTWORK", nil, -5)
-    atbg:SetTexture"Interface\\BUTTONS\\WHITE8X8"
-    atbg:SetVertexColor(0,0,0,1)
-    atbg:SetPoint("TOPLEFT", at, "TOPLEFT", -1,1)
-    atbg:SetPoint("BOTTOMRIGHT", at, "BOTTOMRIGHT", 1,-1)
-
-    resolve.maxheight = self:GetHeight()
-    resolve.SetValue = function(self, p)
-        if p > 1 then p = 1 end
-        if p < 0 then p = 0 end
-        if p == 0 then self:Hide() else self:Show() end
-        self:SetHeight(p*self.maxheight)
-    end
-    resolve:SetValue(0)
-
-    resolve.SetStatusBarColor = function(self, r,g,b)
-        self.texture:SetVertexColor(r,g,b)
-    end
-
+    local resolve = CreateResolveBar(self)
     self.resolve = resolve
-
-    local pbbg = resolve:CreateTexture(nil,"ARTWORK",nil,-8)
-    pbbg:SetAllPoints(resolve)
-    pbbg:SetTexture(powertexture)
-    pbbg.SetColor = HealthBarSetColorBG
-    resolve.bg = pbbg
 
     --------------
     -- Stagger
     --------------
 
-    local stagger = CreateFrame("StatusBar", nil, self)
-    stagger:SetWidth(stagger_width)
-    -- stagger:SetPoint("TOPLEFT",self,"TOPRIGHT",1,0)
-    stagger:SetPoint("BOTTOMLEFT",self,"BOTTOMRIGHT",2,0)
-    stagger:SetHeight(height)
-    stagger.baseheight = height
-    stagger.Extend = function(self, v)
-        if v > 1.5 then v = 1.5 end
-        if v > 1 then
-            self:SetHeight(self.baseheight*v)
-        else
-            self:SetHeight(self.baseheight)
-        end
-    end
-
-    stagger:SetStatusBarTexture("Interface\\BUTTONS\\WHITE8X8")
-    stagger:GetStatusBarTexture():SetDrawLayer("ARTWORK",-2)
-    stagger:SetOrientation("VERTICAL")
-    stagger:SetMinMaxValues(0, 1)
-    stagger:SetValue(0.5)
-    local backdrop = {
-        bgFile = "Interface\\BUTTONS\\WHITE8X8", tile = true, tileSize = 0,
-        insets = {left = -2*p, right = -2*p, top = -2*p, bottom = -2*p},
-    }
-    stagger:SetBackdrop(backdrop)
-    stagger:SetBackdropColor(0, 0, 0, 1)
-
-    local stbg = stagger:CreateTexture(nil,"ARTWORK",nil,-3)
-    stbg:SetAllPoints(stagger)
-    stbg:SetTexture("Interface\\BUTTONS\\WHITE8X8")
-    stagger.bg = stbg
-
-    stagger.SetColor = ns.MakeSetColor(0.1)
-
-    -- stagger:SetScript("OnUpdate", function(self, time)
-        -- self:SetValue( self.endTime - GetTime())
-    -- end)
-
-    stagger:Hide()
+    local stagger = CreateStaggerBar(self)
 
     self.stagger = stagger
 
@@ -490,53 +680,9 @@ function NugHealth.Create(self)
     -- Stagger Spikes
     --------------
 
-    local trend = CreateFrame("Frame", nil, stagger)
-    trend:SetFrameLevel(3)
-    trend:SetWidth(trend_width)
-    trend:SetHeight(height*0.25)
-
-    local ttex = trend:CreateTexture(nil, "ARTWORK", nil, 0)
-    ttex:SetTexture("Interface\\BUTTONS\\WHITE8X8")
-    ttex:SetAllPoints()
-    trend.texture = ttex
-
-    trend:SetBackdrop({
-        bgFile = "Interface\\BUTTONS\\WHITE8X8", tile = true, tileSize = 0,
-        insets = {left = -1*p, right = -1*p, top = -1*p, bottom = -1*p},
-    })
-    trend:SetBackdropColor(0, 0, 0, 1)
-    trend:Hide()
-
-    local math_min = math.min
-    trend.SetMod = function(self, mod, averageStagger)
-        local height = self:GetParent().baseheight
-        if mod > 0 then
-            self:ClearAllPoints()
-            local mod2 = math_min(0.75, mod)
-            -- local ah = math_min(averageStagger, 0.75)*height
-            local ah = averageStagger*height
-            self:SetPoint("TOPLEFT", stagger, "BOTTOMRIGHT", 0, ah)
-            self:SetHeight(mod2*height)
-            self.texture:SetVertexColor(0,1,0)
-            self:Show()
-        elseif mod < 0 then
-            self:ClearAllPoints()
-            local mod2 = math.max(-0.75, mod)
-            -- local ah = math_min(averageStagger, 0.75)*height
-            local ah = averageStagger*height
-            -- spike bar won't be starting higher than 75% stagger position.
-            -- it's maximum length is also 75% of frame height
-            -- and the actual stagger bar itself also extends from 100% to 150% stagger if needed
-            self:SetPoint("BOTTOMLEFT", stagger, "BOTTOMRIGHT", 0, ah)
-            self:SetHeight(-mod2*height)
-            self.texture:SetVertexColor(1,0,0)
-            self:Show()
-        else
-            self:Hide()
-        end
-    end
-
+    local trend = CreateStaggerSpikebar(stagger)
     self.trend = trend
+    stagger.trend = trend
 
     --------------
     -- Health
@@ -548,7 +694,7 @@ function NugHealth.Create(self)
     hp:SetPoint("TOPLEFT",self,"TOPLEFT",0,0)
     hp:SetPoint("TOPRIGHT",self,"TOPRIGHT",0,0)
     -- hp:SetPoint("TOPRIGHT",stagger,"TOPRIGHT",0,0)
-    hp:SetHeight(db.height)
+    hp:SetHeight(height)
     hp:GetStatusBarTexture():SetDrawLayer("ARTWORK",-6)
     hp:SetMinMaxValues(0,100)
     hp:SetOrientation("VERTICAL")
@@ -768,15 +914,6 @@ function NugHealth.Create(self)
     hpi.parent = hp
     hp.incoming = hpi
 
-    local p4 = outlineSize + pixelperfect(2)
-    local border = CreateFrame("Frame", nil, self, BackdropTemplateMixin and "BackdropTemplate" or nil)
-    border:SetPoint("TOPLEFT", self, "TOPLEFT", -p4, p4)
-    border:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", p4, -p4)
-    border:SetBackdrop(border_backdrop)
-    border:SetBackdropBorderColor(1, 1, 1, 0.5)
-    border.SetJob = SetJob_Border
-    border:Hide()
-
     self.health = hp
     self.healthtext = self.text2
     -- self.power = stagger
@@ -802,8 +939,7 @@ function NugHealth.Create(self)
     -- print(self == NugHealth)
     -- print(db.point, db.frame, db.relative_point, db.x, db.y)
 
-    -- self:SetPoint(db.point, db.frame, db.relative_point, db.x, db.y)
-    self:SetPoint("CENTER", 0,0)
+    self:SetPoint(db.point, db.frame, db.relative_point, db.x, db.y)
     self:Hide()
 
     return self

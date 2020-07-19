@@ -417,6 +417,7 @@ local function GetForegroundSeparation(health, healthMax, showMissing)
     end
 end
 
+local damageEffect = true
 function NugHealth.UNIT_HEALTH(self, event)
     -- local h = UnitHealth("player")
     -- local mh = UnitHealthMax("player")
@@ -473,6 +474,9 @@ function NugHealth.UNIT_HEALTH(self, event)
             end
         end
     end
+    state.healthPercent = perc
+
+    self.health.text:SetText(math.floor(perc*100 + 0.5))
 
     -- if NugHealthDB.lowhpFlash then
     --     if vp < 0.2 then
