@@ -13,3 +13,4 @@ Libs\AceGUI-3.0\AceGUI-3.0.xml
 Libs\AceConfig-3.0\AceConfig-3.0.xml
 
 NugHealth.lua
+frame.lua
