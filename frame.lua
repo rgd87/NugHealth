@@ -1,7 +1,8 @@
 local addonName, ns = ...
 
 local LSM = LibStub("LibSharedMedia-3.0")
-local healthTextFont = [[Interface\AddOns\NugHealth\Emblem.ttf]]
+LSM:Register("statusbar", "Gradient", [[Interface\AddOns\NugHealth\gradient.tga]])
+LSM:Register("font", "Emblem", [[Interface\AddOns\NugHealth\Emblem.ttf]], GetLocale() ~= "enUS" and 15)
 
 local pmult = 1
 local function pixelperfect(size)
@@ -380,7 +381,7 @@ local function CreateStaggerBar(self)
     stagger:SetValue(0.5)
 
     local p = pixelperfect(1)
-    local outline = MakeBorder(stagger, "Interface\\BUTTONS\\WHITE8X8", -p, -p, -p, -p, "BACKGROUND", -2)
+    local outline = MakeBorder(stagger, "Interface\\BUTTONS\\WHITE8X8", -p*2, -p*2, -p*2, -p*2, "BACKGROUND", -2)
     outline:SetVertexColor(0,0,0,1)
 
     local stbg = stagger:CreateTexture(nil,"ARTWORK",nil,-3)
@@ -467,6 +468,8 @@ local function Reconf(self)
     local isVertical = db.healthOrientation == "VERTICAL"
 
     local texpath = LSM:Fetch("statusbar", db.healthTexture)
+    local healthTextFont = LSM:Fetch("font", "Emblem")
+
     self.health:SetStatusBarTexture(texpath)
     self.health:GetStatusBarTexture():SetDrawLayer("ARTWORK",-6)
     self.health.bg:SetTexture(texpath)
@@ -638,7 +641,8 @@ function NugHealth.Create(self)
 
     local p = pixelperfect(1)
 
-    -- local texture = LSM:Fetch("statusbar", db.healthTexture)
+    local texture = LSM:Fetch("statusbar", db.healthTexture)
+    local healthTextFont = LSM:Fetch("font", "Emblem")
     -- local powertexture = LSM:Fetch("statusbar", db.powerTexture)
     -- local font = LSM:Fetch("font",  Aptechka.db.profile.nameFontName)
     -- local fontsize = Aptechka.db.profile.nameFontSize
