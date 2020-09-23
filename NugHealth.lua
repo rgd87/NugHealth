@@ -47,6 +47,7 @@ local defaults = {
     classcolor = true,
     healthTexture = "Gradient",
     healthOrientation = "VERTICAL",
+    outOfCombatAlpha = 0,
     allSpecs = false,
     healthcolor = { 0.78, 0.61, 0.43 },
     x = 0,
@@ -513,62 +514,57 @@ end
 -- end
 
 
--- local doFadeOut = true
--- local fadeAfter = 3
--- local fadeTime = 1
--- local fader = CreateFrame("Frame", nil, NugHealth)
--- NugHealth.fader = fader
--- local HideTimer = function(self, time)
---     self.OnUpdateCounter = (self.OnUpdateCounter or 0) + time
---     if self.OnUpdateCounter < fadeAfter then return end
+local doFadeOut = true
+local fadeAfter = 3
+local fadeTime = 1
+local fader = CreateFrame("Frame", nil, NugHealth)
+NugHealth.fader = fader
+local HideTimer = function(self, time)
+    self.OnUpdateCounter = (self.OnUpdateCounter or 0) + time
+    if self.OnUpdateCounter < fadeAfter then return end
 
---     local nhe = NugHealth
---     local p = fadeTime - ((self.OnUpdateCounter - fadeAfter) / fadeTime)
---     -- if p < 0 then p = 0 end
---     -- local ooca = NugHealthDB.outOfCombatAlpha
---     -- local a = ooca + ((1 - ooca) * p)
---     local pA = NugHealthDB.outOfCombatAlpha
---     local rA = 1 - NugHealthDB.outOfCombatAlpha
---     local a = pA + (p*rA)
---     nhe:SetAlpha(a)
---     nhe.healthlost:Hide()
---     nhe.absorb2:Hide()
---     if self.OnUpdateCounter >= fadeAfter + fadeTime then
---         self:SetScript("OnUpdate",nil)
---         if nhe:GetAlpha() <= 0.03 then
---             nhe:Hide()
---         end
---         nhe.hiding = false
---         self.OnUpdateCounter = 0
---     end
--- end
--- function NugHealth:StartHiding()
---     if (not self.hiding and self:IsVisible())  then
---         fader:SetScript("OnUpdate", HideTimer)
---         fader.OnUpdateCounter = 0
---         self.hiding = true
---     end
--- end
+    local nhe = NugHealth
+    local p = fadeTime - ((self.OnUpdateCounter - fadeAfter) / fadeTime)
+    -- if p < 0 then p = 0 end
+    -- local ooca = NugHealthDB.outOfCombatAlpha
+    -- local a = ooca + ((1 - ooca) * p)
+    local pA = NugHealthDB.outOfCombatAlpha
+    local rA = 1 - NugHealthDB.outOfCombatAlpha
+    local a = pA + (p*rA)
+    nhe:SetAlpha(a)
+    if self.OnUpdateCounter >= fadeAfter + fadeTime then
+        self:SetScript("OnUpdate",nil)
+        if nhe:GetAlpha() <= 0.03 then
+            nhe:Hide()
+        end
+        nhe.hiding = false
+        self.OnUpdateCounter = 0
+    end
+end
+function NugHealth:StartHiding()
+    if (not self.hiding and self:IsVisible())  then
+        fader:SetScript("OnUpdate", HideTimer)
+        fader.OnUpdateCounter = 0
+        self.hiding = true
+    end
+end
 
--- function NugHealth:StopHiding()
---     -- if self.hiding then
---         fader:SetScript("OnUpdate", nil)
---         local nhe = NugHealth
---         nhe:SetAlpha(1)
---         nhe.healthlost:Show()
---         nhe.absorb2:Show()
---         self.hiding = false
---     -- end
--- end
+function NugHealth:StopHiding()
+    -- if self.hiding then
+        fader:SetScript("OnUpdate", nil)
+        self:SetAlpha(1)
+        self.hiding = false
+    -- end
+end
 
 function NugHealth.PLAYER_REGEN_DISABLED(self, event)
-    -- self:StopHiding()
+    self:StopHiding()
     self:Show()
 end
 function NugHealth.PLAYER_REGEN_ENABLED(self, event)
     if NugHealthDB.hideOutOfCombat then
-        self:Hide()
-        -- self:StartHiding()
+        -- self:Hide()
+        self:StartHiding()
     end
 end
 
