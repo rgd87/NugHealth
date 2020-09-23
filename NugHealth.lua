@@ -10,7 +10,7 @@ end)
 
 NugHealth:RegisterEvent("ADDON_LOADED")
 
-local LibCLHealth = LibStub("LibCombatLogHealth-1.0")
+-- local LibCLHealth = LibStub("LibCombatLogHealth-1.0")
 local DB_VERSION = 1
 local UnitHealth = UnitHealth
 local UnitHealthOriginal = UnitHealth
@@ -316,6 +316,7 @@ function NugHealth:Enable()
     playerGUID = UnitGUID("player")
 
     NugHealthDB.useCLH = false
+    --[[
     if LibCLHealth and NugHealthDB.useCLH then
         self:UnregisterEvent("UNIT_HEALTH")
         UnitHealth = LibCLHealth.UnitHealth
@@ -329,6 +330,7 @@ function NugHealth:Enable()
             LibCLHealth.UnregisterCallback(self, "COMBAT_LOG_HEALTH")
         end
     end
+    ]]
     -- self:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
     if not isClassic then
         self:RegisterUnitEvent("UNIT_ABSORB_AMOUNT_CHANGED", "player")
@@ -685,6 +687,7 @@ NugHealth.Commands = {
     end,
 
 
+    --[[
     ["useclh"] = function(v)
         NugHealthDB.useCLH = not NugHealthDB.useCLH
         if NugHealthDB.useCLH then
@@ -701,6 +704,7 @@ NugHealth.Commands = {
             print("Fast health updates disabled")
         end
     end,
+    ]]
     -- ["set"] = function(v)
         -- local p = ParseOpts(v)
     -- end
