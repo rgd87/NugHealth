@@ -1021,6 +1021,20 @@ function NugHealth:CreateGUI()
                         step = 1,
                         order = 12,
                     },
+                    orientation = {
+                        name = "Health Orientation",
+                        type = 'select',
+                        order = 12.5,
+                        values = {
+                            ["HORIZONTAL"] = "Horizontal",
+                            ["VERTICAL"] = "Vertical",
+                        },
+                        get = function(info) return NugHealthDB.healthOrientation end,
+                        set = function( info, v )
+                            NugHealthDB.healthOrientation = v
+                            NugHealth:Resize()
+                        end,
+                    },
                     allSpecs = {
                         name = "Show for all specializations",
                         type = "toggle",
