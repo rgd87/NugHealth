@@ -710,7 +710,7 @@ NugHealth.Commands = {
 }
 
 function NugHealth.SlashCmd(msg)
-    k,v = string.match(msg, "([%w%+%-%=]+) ?(.*)")
+    local k,v = string.match(msg, "([%w%+%-%=]+) ?(.*)")
     if not k or k == "help" then
         print([[Usage:
           |cff55ffff/nhe unlock|r

@@ -99,7 +99,7 @@ local function CreateHealAbsorb(hp)
 
     healAbsorb:SetHorizTile(true)
     healAbsorb:SetVertTile(true)
-    healAbsorb:SetTexture("Interface\\AddOns\\Aptechka\\shieldtex", "REPEAT", "REPEAT")
+    healAbsorb:SetTexture("Interface\\AddOns\\NugHealth\\shieldtex", "REPEAT", "REPEAT")
     healAbsorb:SetVertexColor(0.5,0.1,0.1, 0.65)
     healAbsorb:SetBlendMode("ADD")
 
@@ -147,7 +147,7 @@ local function CreateAbsorbBar(hp)
 
     absorb:SetHorizTile(true)
     absorb:SetVertTile(true)
-    absorb:SetTexture("Interface\\AddOns\\Aptechka\\shieldtex", "REPEAT", "REPEAT")
+    absorb:SetTexture("Interface\\AddOns\\NugHealth\\shieldtex", "REPEAT", "REPEAT")
     absorb:SetVertexColor(0,0,0, 0.65)
     -- absorb:SetBlendMode("ADD")
 
@@ -610,7 +610,6 @@ local function Reconf(self)
         absorb:SetHeight(3)
         absorb.orientation = "HORIZONTAL"
         absorb.AlignAbsorb = AlignAbsorbHorizontal
-        Aptechka:UNIT_ABSORB_AMOUNT_CHANGED(nil, self.unit)
 
         local flashPool = self.flashPool
         flashPool.UpdatePosition = flashPool.UpdatePositionHorizontal
@@ -919,10 +918,7 @@ function NugHealth.Create(self)
     hp.incoming = hpi
 
     self.health = hp
-    self.healthtext = self.text2
     -- self.power = stagger
-
-    self.border = border
 
     self.healabsorb = healAbsorb
     self.absorb = absorb
