@@ -451,6 +451,7 @@ function NugHealth.UNIT_HEALTH(self, event)
     self.absorb2:SetValue(shields/hm, perc)
     self.absorb:SetValue(shields/hm, perc)
     self.health.incoming:SetValue(incomingHeal/hm, perc)
+    self.health.lost:SetNewHealthTarget(perc, perc)
 
     if damageEffect then
         local diff = perc - (state.healthPercent or perc)
