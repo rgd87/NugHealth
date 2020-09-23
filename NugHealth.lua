@@ -441,7 +441,7 @@ function NugHealth.UNIT_HEALTH(self, event)
     local shields = UnitGetTotalAbsorbs(unit)
     local healabsorb = UnitGetTotalHealAbsorbs(unit)
     local incomingHeal = UnitGetIncomingHeals(unit)
-    if hm == 0 then return end
+    if hm == 0 or incomingHeal == nil then return end
     local foregroundValue, perc = GetForegroundSeparation(h, hm, fgShowMissing)
     local state = self.state
     -- state.vHealth = h
