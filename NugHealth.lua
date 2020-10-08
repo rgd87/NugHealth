@@ -29,7 +29,6 @@ local GetSpecialization = isClassic and function() return nil end or _G.GetSpeci
 local vengeanceMinRange = 7000
 local vengeanceMaxRange = 200000
 local vengeanceRedRange = 60000
-local healthTextFont = [[Interface\AddOns\NugHealth\Emblem.ttf]]
 
 local staggerMul = 1
 local resolveMul = 1

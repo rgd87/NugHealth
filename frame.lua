@@ -2,7 +2,7 @@ local addonName, ns = ...
 
 local LSM = LibStub("LibSharedMedia-3.0")
 LSM:Register("statusbar", "Gradient", [[Interface\AddOns\NugHealth\gradient.tga]])
-LSM:Register("font", "Emblem", [[Interface\AddOns\NugHealth\Emblem.ttf]], GetLocale() ~= "enUS" and 15)
+LSM:Register("font", "OpenSans Bold", [[Interface\AddOns\NugHealth\OpenSans-Bold.ttf]], GetLocale() ~= "enUS" and 15)
 
 local pmult = 1
 local function pixelperfect(size)
@@ -561,7 +561,7 @@ local function Reconf(self)
     local isVertical = db.healthOrientation == "VERTICAL"
 
     local texpath = LSM:Fetch("statusbar", db.healthTexture)
-    local healthTextFont = LSM:Fetch("font", "Emblem")
+    local healthTextFont = LSM:Fetch("font", "OpenSans Bold")
 
     self.health:SetStatusBarTexture(texpath)
     self.health:GetStatusBarTexture():SetDrawLayer("ARTWORK",-6)
@@ -742,7 +742,7 @@ function NugHealth.Create(self)
     local p = pixelperfect(1)
 
     local texture = LSM:Fetch("statusbar", db.healthTexture)
-    local healthTextFont = LSM:Fetch("font", "Emblem")
+    local healthTextFont = LSM:Fetch("font", "OpenSans Bold")
     -- local powertexture = LSM:Fetch("statusbar", db.powerTexture)
     -- local font = LSM:Fetch("font",  Aptechka.db.profile.nameFontName)
     -- local fontsize = Aptechka.db.profile.nameFontSize
