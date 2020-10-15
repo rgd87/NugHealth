@@ -9,6 +9,15 @@ local function pixelperfect(size)
     return floor(size/pmult + 0.5)*pmult
 end
 
+local FRAMELEVEL = {
+    BASEFRAME = 0,
+    HEALTH = 1,
+    POWER = 1,
+    BORDER = 2,
+    BAR = 5,
+    TEXT = 3,
+}
+
 local MakeBorder = function(self, tex, left, right, top, bottom, drawLayer, level)
     local t = self:CreateTexture(nil, drawLayer, nil, level)
     t:SetTexture(tex)
@@ -389,7 +398,7 @@ local function CreateStaggerSpikebar(parent)
     local trend_width = pixelperfect(NugHealthDB.spike_width)
 
     local trend = CreateFrame("Frame", nil, parent)
-    trend:SetFrameLevel(3)
+    trend:SetFrameLevel(FRAMELEVEL.BAR)
     trend:SetWidth(trend_width)
     trend:SetHeight(height*0.25)
 
@@ -748,7 +757,6 @@ function NugHealth.Create(self)
     -- local fontsize = Aptechka.db.profile.nameFontSize
     -- local manabar_width = config.manabarwidth
     local outlineSize = pixelperfect(2)
-
     local height = pixelperfect(NugHealthDB.height)
     local width = pixelperfect(NugHealthDB.width)
     local absorb_width = pixelperfect(NugHealthDB.absorb_width)
@@ -756,6 +764,7 @@ function NugHealth.Create(self)
 
     self:SetWidth(width)
     self:SetHeight(height)
+    self:SetFrameLevel(FRAMELEVEL.BASEFRAME)
 
     self.state = {}
 
@@ -794,7 +803,7 @@ function NugHealth.Create(self)
 
     -- local hp = CreateFrame("StatusBar", nil, self)
     local hp = ns.CreateCustomStatusBar(nil, self, "VERTICAL")
-    --hp:SetAllPoints(self)
+    hp:SetFrameLevel(FRAMELEVEL.HEALTH)
     hp:SetPoint("TOPLEFT",self,"TOPLEFT",0,0)
     hp:SetPoint("TOPRIGHT",self,"TOPRIGHT",0,0)
     -- hp:SetPoint("TOPRIGHT",stagger,"TOPRIGHT",0,0)

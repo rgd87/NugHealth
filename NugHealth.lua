@@ -330,6 +330,7 @@ function NugHealth:Enable()
         end
     end
     ]]
+    self:RegisterUnitEvent("UNIT_HEALTH", "player")
     -- self:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
     if not isClassic then
         self:RegisterUnitEvent("UNIT_ABSORB_AMOUNT_CHANGED", "player")
