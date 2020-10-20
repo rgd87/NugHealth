@@ -179,7 +179,7 @@ function NugHealth.StaggerOnUpdate(self, time)
     if currentStagger ~= lastStagger then
         lastStagger = currentStagger
 
-        return self:PLAYER_STAGGER_UPDATE(currentStagger)
+        return self:PLAYER_STAGGER_UPDATE(currentStagger or 0)
     end
 end
 
