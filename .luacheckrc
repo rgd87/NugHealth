@@ -129,5 +129,5 @@ globals = {
     "GetCVar",
     "UnitClass",
     "CreateTexturePool",
-
+    "GetSpecialization",
 }
