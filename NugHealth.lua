@@ -16,15 +16,23 @@ local UnitHealth = UnitHealth
 local UnitHealthOriginal = UnitHealth
 local UnitHealthMax = UnitHealthMax
 local UnitGetTotalAbsorbs = UnitGetTotalAbsorbs
+local UnitGetTotalHealAbsorbs = UnitGetTotalHealAbsorbs
 local UnitGetIncomingHeals = UnitGetIncomingHeals
+local GetSpecialization = GetSpecialization
 local GetTime = GetTime
 local math_min = math.min
 local math_max = math.max
 local lowhpcolor = false
 local showSpikes = true
 local isMonk = select(2, UnitClass"player") == "MONK"
-local isClassic = select(4,GetBuildInfo()) <= 19999
-local GetSpecialization = isClassic and function() return nil end or _G.GetSpecialization
+local apiLevel = math.floor(select(4,GetBuildInfo())/10000)
+local isClassic = apiLevel <= 3
+if isClassic then
+    GetSpecialization = function() return 1 end
+    UnitGetTotalAbsorbs = function() return 0 end
+    UnitGetTotalHealAbsorbs = function() return 0 end
+    UnitGetIncomingHeals = function() return 0 end
+end
 
 local vengeanceMinRange = 7000
 local vengeanceMaxRange = 200000
@@ -47,7 +55,7 @@ local defaults = {
     healthTexture = "Gradient",
     healthOrientation = "VERTICAL",
     outOfCombatAlpha = 0,
-    allSpecs = false,
+    allSpecs = isClassic,
     healthcolor = { 0.78, 0.61, 0.43 },
     x = 0,
     y = 0,
