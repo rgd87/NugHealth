@@ -544,6 +544,7 @@ local HideTimer = function(self, time)
     local pA = NugHealthDB.outOfCombatAlpha
     local rA = 1 - NugHealthDB.outOfCombatAlpha
     local a = pA + (p*rA)
+    if a < 0 then a = 0 end
     nhe:SetAlpha(a)
     if self.OnUpdateCounter >= fadeAfter + fadeTime then
         self:SetScript("OnUpdate",nil)
